@@ -1,0 +1,9 @@
+# 忽略 Node 套件與編譯產物
+node_modules/
+dist/
+build/
+.env
+*.log
+
+# macOS 系統檔案
+.DS_Store
