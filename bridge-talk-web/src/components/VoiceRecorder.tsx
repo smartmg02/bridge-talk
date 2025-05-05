@@ -1,4 +1,4 @@
-'use client';
+'use client'
 
 import React, { useRef, useState } from 'react';
 import { supabase } from '@/lib/supabase';
@@ -6,23 +6,16 @@ import { v4 as uuidv4 } from 'uuid';
 
 const VoiceRecorder = () => {
   const [recording, setRecording] = useState(false);
+  const [textInput, setTextInput] = useState('');
   const [audioURL, setAudioURL] = useState('');
   const [responseText, setResponseText] = useState('');
-  const [manualInput, setManualInput] = useState('');
-  const [highlightPoints, setHighlightPoints] = useState('');
-  const [style, setStyle] = useState('warm'); // 使用者選擇的回應風格
+  const [style, setStyle] = useState<'bestie' | 'peacemaker' | 'observer' | 'loose'>('bestie');
+  const [intensity, setIntensity] = useState<'low' | 'medium' | 'high'>('medium');
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
-
-  // 🔵 偵測輸入語言（簡單判斷）
-  const detectLanguage = (text: string): 'zh' | 'en' | 'es' => {
-    const zhRegex = /[\u4e00-\u9fff]/;
-    const esRegex = /[áéíóúñü¿¡]/i;
-    
-    if (zhRegex.test(text)) return 'zh';
-    if (esRegex.test(text)) return 'es';
-    return 'en'; // 預設英文
-  };
 
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -42,16 +35,16 @@ const VoiceRecorder = () => {
       const formData = new FormData();
       formData.append('audio', audioBlob, 'voice.webm');
 
-      const response = await fetch('/api/voice-to-text', {
+      const whisperRes = await fetch('/api/voice-to-text', {
         method: 'POST',
         body: formData
       });
 
-      const result = await response.json();
-      const userText = result.text;
-      console.log('🗣 使用者心聲(語音)：', userText);
+      const whisperData = await whisperRes.json();
+      const userText = whisperData.text;
+      setTextInput(userText);
 
-      await processUserText(userText, url);
+      handleAIResponse(userText, url);
     };
 
     mediaRecorderRef.current.start();
@@ -63,128 +56,147 @@ const VoiceRecorder = () => {
     setRecording(false);
   };
 
-  const handleManualSubmit = async () => {
-    if (!manualInput.trim()) {
-      alert('請輸入你的心聲（完整描述）喔！');
-      return;
-    }
-    console.log('📝 使用者心聲(文字)：', manualInput);
-    console.log('✨ 使用者 Highlight 重點：', highlightPoints);
+  const handleAIResponse = async (userText: string, audioUrl: string | null = null) => {
+    setIsLoading(true);
+    const highlightRes = await fetch('/api/highlight', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ full_description: userText })
+    });
 
-    await processUserText(manualInput, null);
+    const highlightData = await highlightRes.json();
+    const highlight = highlightData.highlight;
 
-    setManualInput('');
-    setHighlightPoints('');
-  };
-
-  const processUserText = async (fullText: string, audioUrl: string | null) => {
-    const language = detectLanguage(fullText);
-
-    const gptResponse = await fetch('/api/third-person-reply', {
+    const gptRes = await fetch('/api/third-person-reply', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        full_description: fullText,
-        highlight_points: highlightPoints,
-        emotion_level: style === 'warm' ? 'mild' : style === 'rational' ? 'medium' : 'strong',
-        language: language
+        full_description: userText,
+        highlight_points: highlight,
+        style,
+        intensity
       })
     });
 
-    if (!gptResponse.ok) {
-      const errorText = await gptResponse.text();
-      console.error('🧨 GPT API 回傳錯誤：', gptResponse.status, errorText);
-      alert('⚠️ AI 回覆失敗，請稍後再試');
-      return;
-    }
+    const gptData = await gptRes.json();
+    const reply = gptData.reply;
+    setResponseText(reply);
 
-    const gptResult = await gptResponse.json();
-    console.log('🤖 GPT 回應：', gptResult.reply);
-
-    setResponseText(gptResult.reply);
-
-    try {
-      const { error } = await supabase.from('records').insert([
-        {
-          id: uuidv4(),
-          user_text: fullText,
-          gpt_reply: gptResult.reply,
-          audio_url: audioUrl
-        }
-      ]);
-      if (error) {
-        console.error('儲存到 Supabase 時發生錯誤：', error.message);
+    await supabase.from('records').insert([
+      {
+        id: uuidv4(),
+        user_text: userText,
+        gpt_reply: reply,
+        audio_url: audioUrl ?? ''
       }
-    } catch (err) {
-      console.error('Supabase 插入資料失敗：', err);
+    ]);
+
+    setIsLoading(false);
+  };
+
+  const handleTextSubmit = async () => {
+    if (textInput.trim()) {
+      handleAIResponse(textInput.trim());
     }
   };
 
+  const handleSendEmail = async () => {
+    if (!email || !responseText || !textInput) return;
+    await fetch('/api/send-email', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        to: email,
+        subject: 'BridgeTalk AI 回應',
+        message: { user_text: textInput, gpt_reply: responseText }
+      })
+    });
+    alert('已發送至指定 Email');
+  };
+
   return (
-    <div className="p-4 border rounded shadow w-full max-w-md space-y-6">
-      <h2 className="text-xl font-bold mb-4">語音／文字輸入</h2>
+    <div className="p-4 border rounded shadow w-full max-w-md">
+      <h2 className="text-xl font-bold mb-2">輸入心聲</h2>
 
-      {/* 🔵 文字輸入區 */}
-      <div className="space-y-2">
-        <textarea
-          value={manualInput}
-          onChange={(e) => setManualInput(e.target.value)}
-          placeholder="請輸入你的心聲（完整描述）..."
-          className="w-full p-2 border rounded"
-          rows={4}
-        />
-        <textarea
-          value={highlightPoints}
-          onChange={(e) => setHighlightPoints(e.target.value)}
-          placeholder="請輸入特別想強調的重點（建議1-3個）"
-          className="w-full p-2 border rounded mt-2"
-          rows={2}
-        />
-        <div className="mb-4">
-          <label className="block mb-1 font-semibold">選擇回應風格：</label>
-          <select
-  value={style}
-  onChange={(e) => setStyle(e.target.value)}
-  className="p-2 border rounded w-full"
->
-  <option value="bestie">👯 閨蜜 Bestie</option>
-  <option value="peacemaker">🕊️ 和事佬 Peacemaker</option>
-  <option value="observer">👀 中立觀察者 Observer</option>
-</select>
-
-        </div>
-        <button
-          onClick={handleManualSubmit}
-          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
+      <div className="mb-4">
+        <label className="block mb-1 font-semibold">選擇回應風格：</label>
+        <select
+          value={style}
+          onChange={(e) => setStyle(e.target.value as any)}
+          className="p-2 border rounded w-full"
         >
-          ✉️ 送出文字心聲
-        </button>
+          <option value="bestie">👯 閨蜜（bestie）</option>
+          <option value="peacemaker">🕊️ 和事佬（peacemaker）</option>
+          <option value="observer">🔍 旁觀者（observer）</option>
+          <option value="loose">😆 嘴賤朋友（loose）</option>
+        </select>
       </div>
 
-      <hr />
+      <div className="mb-4">
+        <label className="block mb-1 font-semibold">語氣強度：</label>
+        <div className="flex space-x-4">
+          <label><input type="radio" name="intensity" value="low" checked={intensity === 'low'} onChange={() => setIntensity('low')} /> 弱</label>
+          <label><input type="radio" name="intensity" value="medium" checked={intensity === 'medium'} onChange={() => setIntensity('medium')} /> 普通</label>
+          <label><input type="radio" name="intensity" value="high" checked={intensity === 'high'} onChange={() => setIntensity('high')} /> 強</label>
+        </div>
+      </div>
 
-      {/* 🔵 語音錄音功能 */}
-      <div className="space-y-2">
+      <div className="mb-4">
         <button
           onClick={recording ? stopRecording : startRecording}
           className={`px-4 py-2 rounded text-white ${recording ? 'bg-red-500' : 'bg-blue-500'}`}
         >
-          {recording ? '停止錄音' : '開始錄音'}
+          {recording ? '⏹️ 停止錄音' : '🎤 開始錄音'}
         </button>
-        {audioURL && (
-          <div className="mt-2">
-            <audio src={audioURL} controls />
-          </div>
+      </div>
+
+      {audioURL && (
+        <div className="mb-4">
+          <audio src={audioURL} controls />
+        </div>
+      )}
+
+      <div className="mb-4">
+        <textarea
+          rows={4}
+          placeholder="請輸入你的心聲..."
+          value={textInput}
+          onChange={(e) => setTextInput(e.target.value)}
+          className="w-full p-2 border rounded"
+        />
+        <button
+          onClick={handleTextSubmit}
+          className="mt-2 px-4 py-2 bg-green-600 text-white rounded"
+        >
+          ✉️ 送出文字
+        </button>
+      </div>
+
+      <div className="mt-6 p-4 bg-gray-100 rounded">
+        <h3 className="font-semibold text-lg mb-2">第三人設回應：</h3>
+        {isLoading ? (
+          <p>🤖 AI 回應產生中...</p>
+        ) : (
+          responseText && <p>{responseText}</p>
         )}
       </div>
 
-      {/* 🔵 顯示 GPT 回應 */}
-      {responseText && (
-        <div className="mt-6 p-4 bg-gray-100 rounded">
-          <h3 className="font-semibold text-lg mb-2">第三人設回應：</h3>
-          <p>{responseText}</p>
-        </div>
-      )}
+      <div className="mt-4">
+        <label className="block mb-1 font-semibold">寄送回應至 Email（可選）：</label>
+        <input
+          type="email"
+          placeholder="you@example.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          className="w-full p-2 border rounded mb-2"
+        />
+        <button
+          onClick={handleSendEmail}
+          className="px-4 py-2 bg-indigo-600 text-white rounded"
+        >
+          📧 寄出回應
+        </button>
+      </div>
     </div>
   );
 };
