@@ -1,8 +1,10 @@
+// /components/VoiceRecorder.tsx
 'use client'
 
-import React, { useRef, useState } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { v4 as uuidv4 } from 'uuid';
+import { useRouter } from 'next/navigation';
 
 const VoiceRecorder = () => {
   const [recording, setRecording] = useState(false);
@@ -11,11 +13,20 @@ const VoiceRecorder = () => {
   const [responseText, setResponseText] = useState('');
   const [style, setStyle] = useState<'bestie' | 'peacemaker' | 'observer' | 'loose'>('bestie');
   const [intensity, setIntensity] = useState<'low' | 'medium' | 'high'>('medium');
+  const [language, setLanguage] = useState<'zh-tw' | 'zh-cn'>('zh-tw');
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [userEmail, setUserEmail] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunks = useRef<Blob[]>([]);
+  const router = useRouter();
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => {
+      setUserEmail(data.user?.email ?? null);
+    });
+  }, []);
 
   const startRecording = async () => {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -74,7 +85,8 @@ const VoiceRecorder = () => {
         full_description: userText,
         highlight_points: highlight,
         style,
-        intensity
+        intensity,
+        language
       })
     });
 
@@ -87,7 +99,8 @@ const VoiceRecorder = () => {
         id: uuidv4(),
         user_text: userText,
         gpt_reply: reply,
-        audio_url: audioUrl ?? ''
+        audio_url: audioUrl ?? '',
+        user_email: userEmail ?? ''
       }
     ]);
 
@@ -117,6 +130,18 @@ const VoiceRecorder = () => {
   return (
     <div className="p-4 border rounded shadow w-full max-w-md">
       <h2 className="text-xl font-bold mb-2">輸入心聲</h2>
+
+      <div className="mb-4">
+        <label className="block mb-1 font-semibold">選擇語言：</label>
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value as any)}
+          className="p-2 border rounded w-full"
+        >
+          <option value="zh-tw">繁體中文</option>
+          <option value="zh-cn">简体中文</option>
+        </select>
+      </div>
 
       <div className="mb-4">
         <label className="block mb-1 font-semibold">選擇回應風格：</label>
