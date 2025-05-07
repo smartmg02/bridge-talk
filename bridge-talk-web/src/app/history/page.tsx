@@ -1,3 +1,4 @@
+// ✅ C:\bridge-talk\bridge-talk-web\src\app\history\page.tsx
 'use client'
 
 import { useEffect, useState } from 'react';
@@ -65,13 +66,25 @@ export default function HistoryPage() {
     alert('回應已複製');
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/login');
+  };
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">🗂 歷史紀錄</h1>
-        <button onClick={() => router.push('/')} className="text-blue-600 underline">
-          回到首頁
-        </button>
+        <div className="flex gap-4">
+          <button onClick={() => router.push('/')} className="text-blue-600 underline">
+            回到首頁
+          </button>
+          {userEmail && (
+            <button onClick={handleLogout} className="text-red-600 underline">
+              登出
+            </button>
+          )}
+        </div>
       </div>
 
       {records.length === 0 ? (
@@ -83,9 +96,9 @@ export default function HistoryPage() {
               <li key={record.id} className="p-4 bg-white rounded shadow border">
                 <p><strong>🗣 心聲：</strong> {record.user_text}</p>
                 <p className="mt-2"><strong>🤖 回應：</strong> {record.gpt_reply}</p>
-                {record.audio_url ? (
+                {record.audio_url && (
                   <audio className="mt-2" src={record.audio_url} controls />
-                ) : null}
+                )}
                 <p className="text-gray-500 text-sm mt-2">
                   🕒 {new Date(record.created_at).toLocaleString()}
                 </p>
