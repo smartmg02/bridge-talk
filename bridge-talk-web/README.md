@@ -1,36 +1,56 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# BridgeTalk
 
-## Getting Started
+BridgeTalk 是一個以 AI 為核心的情緒表達應用，讓使用者能用第三人稱方式釋放內心話，並提供角色化回應風格。
 
-First, run the development server:
+## ✨ 功能概述
+
+- 登入系統（Email 連結登入 / Google OAuth）
+- 輸入心聲文字並選擇角色風格
+- AI 即時 Streaming 回應
+- 儲存歷史紀錄（綁定登入帳號）
+- 可查看個人歷史紀錄
+
+## 🛠 技術堆疊
+
+- Next.js App Router
+- Supabase Auth & Database
+- OpenAI GPT API
+- Tailwind CSS
+
+## 🚀 安裝與啟動
 
 ```bash
+git clone https://github.com/your-username/bridge-talk.git
+cd bridge-talk
+npm install
+cp .env.example .env
+# 填入 Supabase 專案對應資訊
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 📁 目錄結構簡介
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```
+src/
+├── app/
+│   ├── page.tsx              // 首頁 + 輸入框 + 歷史紀錄
+│   ├── login/page.tsx        // 登入頁面
+│   ├── history/page.tsx      // 獨立歷史紀錄頁
+│   └── layout.tsx            // 使用 SupabaseProvider 包裝全站
+├── components/
+│   ├── UserInputForm.tsx     // 使用者輸入表單
+│   ├── HistoryList.tsx       // 歷史紀錄元件
+│   └── SupabaseProvider.tsx  // SessionContextProvider 包裝器
+├── constants/
+│   └── rolePrompts.ts        // 預設角色設定
+├── lib/
+│   └── supabase.ts           // Supabase client 初始化
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 🧪 測試用帳號
 
-## Learn More
+你可用任何 email 來測試 OTP 登入流程，或設定自己的 Google OAuth 憑證來整合 Google 登入。
 
-To learn more about Next.js, take a look at the following resources:
+## 📬 聯絡
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+如需協助請聯繫 maintainer@example.com

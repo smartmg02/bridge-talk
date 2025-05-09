@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase';
-import type { User } from '@supabase/supabase-js';
 
 type Record = {
   id: number;
@@ -12,23 +11,24 @@ type Record = {
   created_at: string;
 };
 
-export default function HistoryList({ userEmail }: { userEmail: string }) {
+export default function HistoryList({ userEmail, limit }: { userEmail: string; limit?: number }) {
   const [records, setRecords] = useState<Record[]>([]);
   const supabase = createClient();
 
   useEffect(() => {
     const fetchData = async () => {
-      const { data } = await supabase
+      const query = supabase
         .from('records')
         .select('*')
         .eq('user_email', userEmail)
         .order('created_at', { ascending: false });
 
+      const { data } = limit ? await query.limit(limit) : await query;
       if (data) setRecords(data);
     };
 
     fetchData();
-  }, [userEmail]);
+  }, [userEmail, limit]);
 
   return (
     <div className="space-y-2 mt-6">

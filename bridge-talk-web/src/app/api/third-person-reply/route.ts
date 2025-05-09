@@ -1,5 +1,4 @@
-import { NextRequest } from 'next/server';
-import { OpenAIStream, StreamingTextResponse } from 'ai';
+import { NextRequest, NextResponse } from 'next/server';
 import { rolePrompts } from '@/constants/rolePrompts';
 
 export async function POST(req: NextRequest) {
@@ -22,6 +21,16 @@ export async function POST(req: NextRequest) {
     }),
   });
 
-  const stream = OpenAIStream(response);
-  return new StreamingTextResponse(stream);
+  const { body } = response;
+  if (!body) {
+    return new NextResponse('No response body', { status: 500 });
+  }
+
+  return new NextResponse(body, {
+    headers: {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      Connection: 'keep-alive',
+    },
+  });
 }
