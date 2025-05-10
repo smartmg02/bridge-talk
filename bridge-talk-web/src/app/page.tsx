@@ -9,6 +9,7 @@ import { useRouter } from 'next/navigation';
 export default function HomePage() {
   const [reply, setReply] = useState('');
   const [userEmail, setUserEmail] = useState('');
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
   const supabase = createClient();
 
@@ -32,7 +33,14 @@ export default function HomePage() {
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ message, email, role, tone, highlight }),
+      body: JSON.stringify({
+        content: message,
+        email,
+        role,
+        tone,
+        highlight,
+        language: 'zh',
+      }),
     });
 
     if (!res.body) {
@@ -50,9 +58,8 @@ export default function HomePage() {
       if (done) break;
 
       buffer += decoder.decode(value, { stream: true });
-
       const lines = buffer.split('\n');
-      buffer = lines.pop() || ''; // 將未結束的 line 保留
+      buffer = lines.pop() || '';
 
       for (const line of lines) {
         const clean = line.replace(/^data: /, '').trim();
@@ -78,14 +85,37 @@ export default function HomePage() {
   const handleLogout = async () => {
     await supabase.auth.signOut();
     setUserEmail('');
-    router.refresh();
+    router.push('/login');
   };
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (data?.user) setUserEmail(data.user.email ?? '');
-    });
+    const checkSession = async () => {
+      console.log('[BridgeTalk] ✅ Checking Supabase session...');
+      const { data: { session }, error } = await supabase.auth.getSession();
+
+      if (error) {
+        console.error('[BridgeTalk] ❌ Session error:', error.message);
+      }
+
+      console.log('[BridgeTalk] 🔍 Session:', session);
+
+      if (!session?.user?.email) {
+        console.warn('[BridgeTalk] ⚠️ No session found, redirecting to /login');
+        router.replace('/login');
+      } else {
+        console.log('[BridgeTalk] ✅ Session OK. User:', session.user.email);
+        setUserEmail(session.user.email);
+      }
+
+      setLoading(false);
+    };
+
+    checkSession();
   }, []);
+
+  if (loading) {
+    return <main className="p-6 text-center">載入中...</main>;
+  }
 
   return (
     <main className="max-w-screen-md mx-auto p-6 space-y-6">

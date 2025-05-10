@@ -1,7 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 import { createClient } from '@/lib/supabase';
 
 export default function LoginPage() {
@@ -9,31 +9,39 @@ export default function LoginPage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const handleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOtp({ email });
-    if (!error) alert('登入連結已寄出，請至信箱點擊連結登入');
-    else alert('登入失敗：' + error.message);
+  const loginWithGoogle = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo: 'http://localhost:3000/auth/callback',
+      },
+    });
   };
 
-  const handleGoogleLogin = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: 'google' });
-    if (error) alert('Google 登入失敗：' + error.message);
+  const loginWithEmail = async () => {
+    await supabase.auth.signInWithOtp({
+      email,
+      options: {
+        emailRedirectTo: 'http://localhost:3000/auth/callback',
+      },
+    });
+    alert('登入連結已寄出，請至信箱點擊以完成登入');
   };
 
   return (
-    <main className="max-w-md mx-auto p-4 space-y-4">
-      <h1 className="text-xl font-bold">登入 BridgeTalk</h1>
+    <main className="p-4 max-w-md mx-auto space-y-4">
+      <h1 className="text-xl font-bold text-center">登入</h1>
       <input
-        className="w-full p-2 border rounded"
         type="email"
-        placeholder="請輸入 email"
+        placeholder="輸入 Email"
+        className="w-full p-2 border rounded"
         value={email}
         onChange={(e) => setEmail(e.target.value)}
       />
-      <button onClick={handleLogin} className="w-full bg-blue-600 text-white p-2 rounded">
-        寄送登入連結
+      <button onClick={loginWithEmail} className="w-full bg-blue-600 text-white p-2 rounded">
+        使用 Email 登入
       </button>
-      <button onClick={handleGoogleLogin} className="w-full bg-red-500 text-white p-2 rounded">
+      <button onClick={loginWithGoogle} className="w-full bg-red-600 text-white p-2 rounded">
         使用 Google 登入
       </button>
     </main>
