@@ -7,7 +7,7 @@ type Record = {
   id: number;
   user_email: string;
   message: string;
-  ai_reply: string;
+  gpt_reply: string;
   created_at: string;
 };
 
@@ -17,22 +17,37 @@ export default function HistoryList({ userEmail, limit }: { userEmail: string; l
 
   useEffect(() => {
     const fetchData = async () => {
+      console.log('📬 嘗試讀取紀錄 for user_email:', userEmail);
+
       const query = supabase
         .from('records')
         .select('*')
         .eq('user_email', userEmail)
         .order('created_at', { ascending: false });
 
-      const { data } = limit ? await query.limit(limit) : await query;
-      if (data) setRecords(data);
+      const { data, error } = limit ? await query.limit(limit) : await query;
+
+      if (error) {
+        console.error('❌ Supabase 查詢失敗:', error.message);
+      } else {
+        console.log('📥 查詢結果:', data);
+        if (data && data.length > 0) {
+          setRecords(data as Record[]);
+        } else {
+          console.warn('⚠️ 查無紀錄，可能 user_email 對不上或資料尚未寫入');
+        }
+      }
     };
 
-    fetchData();
+    if (userEmail) {
+      fetchData();
+    }
   }, [userEmail, limit]);
 
   return (
     <div className="space-y-2 mt-6">
       <h2 className="text-lg font-semibold">歷史紀錄</h2>
+      <p className="text-sm text-gray-400">目前使用者: {userEmail}</p>
       {records.length === 0 ? (
         <p className="text-gray-500">尚無紀錄。</p>
       ) : (
@@ -40,7 +55,7 @@ export default function HistoryList({ userEmail, limit }: { userEmail: string; l
           <div key={r.id} className="border p-3 rounded bg-white">
             <p className="text-sm text-gray-500">{new Date(r.created_at).toLocaleString()}</p>
             <p><strong>我說：</strong>{r.message}</p>
-            <p><strong>AI 回應：</strong>{r.ai_reply}</p>
+            <p><strong>AI 回應：</strong>{r.gpt_reply}</p>
           </div>
         ))
       )}
