@@ -1,3 +1,4 @@
+// ✅ 使用 createBrowserClient，支援 SSR 和 client-side
 import { createBrowserClient } from '@supabase/ssr';
 import { type Database } from '@/types/supabase';
 

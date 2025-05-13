@@ -1,6 +1,6 @@
 import { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
-import { createServerClient } from '@supabase/ssr';
+import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { rolePromptTemplates } from '@/constants/rolePromptTemplates';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -12,32 +12,27 @@ if (!OPENAI_API_KEY) {
 export async function POST(req: NextRequest) {
   console.log('🚀 route.ts POST handler triggered');
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        async get(name: string) {
-          return (await cookies()).get(name)?.value;
-        },
-        set() {},
-        remove() {},
-      },
-    }
-  );
-
+  const supabase = createServerComponentClient({ cookies });
   const {
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
 
-  console.log('🧾 Supabase auth.getUser() result:', { user, userError });
+  if (!user?.email) {
+    return new Response(JSON.stringify({ error: '⚠️ 找不到登入使用者 email' }), {
+      status: 401,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  const email = user.email;
+
+  console.log('🧾 Supabase auth.getUser() result:', { email });
 
   const body = await req.json();
 
   const role = body.role as string;
   const highlight = body.highlight || '';
-  const email = user?.email ?? '';
   const langParam = (body.language ?? 'zh') as string;
   const tone = (body.tone ?? 'medium') as 'soft' | 'medium' | 'strong';
   const content = (body.content ?? body.message) as string;
@@ -83,9 +78,7 @@ ${highlight ? `重點提示：${highlight}` : ''}`;
       model: 'gpt-4',
       temperature: 0.8,
       stream: true,
-      messages: [
-        { role: 'system', content: finalPrompt },
-      ],
+      messages: [{ role: 'system', content: finalPrompt }],
     }),
   });
 
@@ -123,7 +116,9 @@ ${highlight ? `重點提示：${highlight}` : ''}`;
               const delta = parsed.choices?.[0]?.delta?.content;
               if (delta) {
                 fullText += delta;
-                controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: delta } }] })}\n\n`));
+                controller.enqueue(
+                  encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: delta } }] })}\n\n`)
+                );
               }
             } catch (err) {
               console.warn('❌ JSON parse error:', err, 'line:', line);
@@ -132,15 +127,17 @@ ${highlight ? `重點提示：${highlight}` : ''}`;
         }
       }
 
-      if (fullText) {
+      if (fullText && email) {
         const { data, error } = await supabase
           .from('records')
           .insert({
             user_email: email,
             message: content,
             gpt_reply: fullText,
-            audio_url: null,
-            created_at: new Date().toISOString(),
+            mode: 'reply',
+            tone,
+            highlight,
+            role,
           })
           .select();
 

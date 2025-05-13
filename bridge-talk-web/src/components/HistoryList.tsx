@@ -9,6 +9,12 @@ type Record = {
   message: string;
   gpt_reply: string;
   created_at: string;
+  audio_url?: string | null;
+  mode?: string;
+  tone?: string;
+  recipient?: string;
+  highlight?: string;
+  role?: string;
 };
 
 export default function HistoryList({ userEmail, limit }: { userEmail: string; limit?: number }) {
@@ -54,6 +60,9 @@ export default function HistoryList({ userEmail, limit }: { userEmail: string; l
         records.map((r) => (
           <div key={r.id} className="border p-3 rounded bg-white">
             <p className="text-sm text-gray-500">{new Date(r.created_at).toLocaleString()}</p>
+            <p className="text-xs font-semibold text-blue-600">
+              {r.mode === 'proxy' ? '📨 轉述訊息' : '🧠 回應訊息'}
+            </p>
             <p><strong>我說：</strong>{r.message}</p>
             <p><strong>AI 回應：</strong>{r.gpt_reply}</p>
           </div>
