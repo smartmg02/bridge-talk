@@ -1,6 +1,7 @@
+// ✅ bridge-talk-web/src/app/api/third-person-reply/route.ts
 import { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
+import { createServerClient } from '@supabase/ssr';
 import { rolePromptTemplates } from '@/constants/rolePromptTemplates';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
@@ -10,13 +11,30 @@ if (!OPENAI_API_KEY) {
 }
 
 export async function POST(req: NextRequest) {
-  console.log('🚀 route.ts POST handler triggered');
+  console.log('[DEBUG] reply route handler triggered');
 
-  const supabase = createServerComponentClient({ cookies });
+  const cookieStore = cookies() as unknown as { get(name: string): { value: string } | undefined };
+
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+        set() {},
+        remove() {},
+      },
+    }
+  );
+
   const {
     data: { user },
     error: userError,
   } = await supabase.auth.getUser();
+
+  console.log('[DEBUG] Supabase getUser:', { user, userError });
 
   if (!user?.email) {
     return new Response(JSON.stringify({ error: '⚠️ 找不到登入使用者 email' }), {
@@ -26,18 +44,12 @@ export async function POST(req: NextRequest) {
   }
 
   const email = user.email;
-
-  console.log('🧾 Supabase auth.getUser() result:', { email });
-
   const body = await req.json();
-
   const role = body.role as string;
   const highlight = body.highlight || '';
   const langParam = (body.language ?? 'zh') as string;
   const tone = (body.tone ?? 'medium') as 'soft' | 'medium' | 'strong';
   const content = (body.content ?? body.message) as string;
-
-  console.log('📨 Received content:', content);
 
   const validLanguages = ['zh', 'zh_cn', 'en'] as const;
   type ValidLanguage = typeof validLanguages[number];
@@ -60,13 +72,9 @@ export async function POST(req: NextRequest) {
   };
 
   const promptTemplate = promptSet[safeLanguage];
-  const finalPrompt = `${promptTemplate}
+  const finalPrompt = `${promptTemplate}\n\n${toneDescriptions[tone]}\n\n使用者的心聲：${content}\n\n${highlight ? `重點提示：${highlight}` : ''}`;
 
-${toneDescriptions[tone]}
-
-使用者的心聲：${content}
-
-${highlight ? `重點提示：${highlight}` : ''}`;
+  console.log('[DEBUG] final prompt to OpenAI:', finalPrompt);
 
   const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
@@ -128,24 +136,15 @@ ${highlight ? `重點提示：${highlight}` : ''}`;
       }
 
       if (fullText && email) {
-        const { data, error } = await supabase
-          .from('records')
-          .insert({
-            user_email: email,
-            message: content,
-            gpt_reply: fullText,
-            mode: 'reply',
-            tone,
-            highlight,
-            role,
-          })
-          .select();
-
-        if (error) {
-          console.error('❌ 寫入 Supabase records 失敗:', error.message);
-        } else {
-          console.log('✅ 已成功寫入紀錄:', data);
-        }
+        await supabase.from('records').insert({
+          user_email: email,
+          message: content,
+          gpt_reply: fullText,
+          mode: 'reply',
+          tone,
+          highlight,
+          role,
+        });
       }
     },
   });

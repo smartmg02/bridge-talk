@@ -5,23 +5,26 @@ import { createClient } from '@/lib/supabase';
 import UserInputForm from '@/components/UserInputForm';
 import HistoryList from '@/components/HistoryList';
 import { useRouter } from 'next/navigation';
+import { roleOptions } from '@/constants/roleOptions';
 
 export default function HomePage() {
   const [reply, setReply] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [mode, setMode] = useState<'reply' | 'proxy'>('reply');
-  const [recipient, setRecipient] = useState('');
   const [tone, setTone] = useState<'soft' | 'normal' | 'strong'>('normal');
+  const [role, setRole] = useState(roleOptions[0]?.value || 'peacemaker');
+
   const router = useRouter();
   const supabase = createClient();
 
   const handleSubmit = async ({
     message,
     email,
-    role,
+    role: _role,
     tone: userTone,
     highlight,
     recipient,
+    forwardEmail,
     mode: submitMode,
   }: {
     message: string;
@@ -30,15 +33,31 @@ export default function HomePage() {
     tone: string;
     highlight: string;
     recipient?: string;
+    forwardEmail?: string;
     mode?: 'reply' | 'proxy';
   }) => {
     setReply('AI 回應產生中...');
 
     const modeToUse = submitMode || mode;
     const apiPath = modeToUse === 'proxy' ? '/api/third-person-message' : '/api/third-person-reply';
+
     const payload = modeToUse === 'proxy'
-      ? { userInput: message, language: 'zh', tone, recipient, email }
-      : { message, email, role, tone: userTone, highlight };
+      ? {
+          userInput: message,
+          language: 'zh',
+          tone: userTone,
+          recipient,
+          email,
+          role,
+          forwardEmail,
+        }
+      : {
+          message,
+          email,
+          role,
+          tone: userTone,
+          highlight,
+        };
 
     const res = await fetch(apiPath, {
       method: 'POST',
@@ -124,28 +143,17 @@ export default function HomePage() {
           <option value="reply">🎯 第三人稱 AI 回應</option>
           <option value="proxy">📨 訊息轉述給對方</option>
         </select>
-        {mode === 'proxy' && (
-          <>
-            <div>
-              <label className="mr-2">收件人：</label>
-              <input
-                type="text"
-                value={recipient}
-                onChange={(e) => setRecipient(e.target.value)}
-                placeholder="例如：他、她、你"
-                className="border rounded px-2 py-1"
-              />
-            </div>
-            <div>
-              <label className="mr-2">語氣：</label>
-              <select value={tone} onChange={(e) => setTone(e.target.value as any)} className="border rounded px-2 py-1">
-                <option value="soft">溫和</option>
-                <option value="normal">中性</option>
-                <option value="strong">強烈</option>
-              </select>
-            </div>
-          </>
-        )}
+
+        <div>
+          <label className="mr-2">角色風格：</label>
+          <select value={role} onChange={(e) => setRole(e.target.value)} className="border rounded px-2 py-1">
+            {roleOptions.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <UserInputForm onSubmit={handleSubmit} mode={mode} />

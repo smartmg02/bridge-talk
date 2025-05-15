@@ -1,58 +1,41 @@
+// ✅ 修正 await cookies() 的版本：bridge-talk-web/src/app/api/third-person-message/route.ts
 import { NextRequest } from 'next/server';
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { createServerComponentClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
+import { createServerClient } from '@supabase/ssr';
+import { supabaseAdmin } from '@/lib/supabaseAdmin';
+import { rolePromptTemplates } from '@/constants/rolePromptTemplates';
+import { resendEmail } from '@/lib/resendEmail';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
-function buildProxyPrompt({
-  userInput,
-  recipient,
-  language,
-  tone,
-}: {
-  userInput: string;
-  recipient: string;
-  language: string;
-  tone: string;
-}) {
-  if (language === 'zh') {
-    return `你是一位善於觀察、具有高情緒智慧的溝通者。
-
-一位使用者剛剛向你傾訴了他的心聲。他希望你幫他向 ${recipient || '對方'} 傳達一些內容，但他說不出口。
-
-你的任務不是扮演他本人，而是以你自己的觀察角度與理解，用有同理心的方式幫他向對方解釋或轉述他想表達的事情。
-
-請用你的語氣幫忙說出下面這段話想傳達的意義。語氣保持「${tone}」，清楚、溫和、有同理心。
-
-使用者說：
-「${userInput}」
-
-請幫我寫成一段話，可以轉述給 ${recipient || '對方'}。`;
-  } else {
-    return `You are an emotionally intelligent and thoughtful mediator.
-
-A user has just shared something personal with you. They hope you can explain or deliver a message to ${recipient || 'someone'} on their behalf, because they don't feel ready to say it themselves.
-
-You are NOT speaking as the user, but as someone who understands their heart. Help them convey their feelings with care, using your own neutral and empathetic voice.
-
-Keep the tone "${tone}" (gentle / neutral / firm).
-
-Here is what the user told you:
-"${userInput}"
-
-Please turn this into a message that you, as a third party, would say to ${recipient || 'them'} to help express what the user truly meant.`;
-  }
-}
-
 export async function POST(req: NextRequest) {
-  const { userInput, language = 'zh', tone = '溫和', recipient = '' } = await req.json();
+  console.log('[DEBUG] proxy route handler triggered');
 
-  const supabase = createServerComponentClient({ cookies });
+  const { userInput, language = 'zh', tone = '溫和', recipient = '', role = 'peacemaker', forwardEmail } = await req.json();
+  console.log('[DEBUG] request json:', { userInput, language, tone, recipient, role, forwardEmail });
+
+  const cookieStore = await cookies();
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        get(name) {
+          return cookieStore.get(name)?.value;
+        },
+        set() {},
+        remove() {},
+      },
+    }
+  );
+
   const {
     data: { user },
+    error: userError,
   } = await supabase.auth.getUser();
+
+  console.log('[DEBUG] Supabase getUser:', { user, userError });
 
   if (!user?.email) {
     return new Response(JSON.stringify({ error: '⚠️ 找不到登入使用者 email' }), {
@@ -60,17 +43,28 @@ export async function POST(req: NextRequest) {
       headers: { 'Content-Type': 'application/json' },
     });
   }
-  const userEmail = user.email;
 
-  if (!userInput) {
-    return new Response(JSON.stringify({ error: 'Missing userInput' }), {
+  const userEmail = user.email;
+  const promptSet = rolePromptTemplates[role];
+
+  if (!promptSet) {
+    return new Response(JSON.stringify({ error: '⚠️ 找不到對應角色' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });
   }
 
-  const systemPrompt = 'You are a helpful AI who interprets and communicates on behalf of users.';
-  const prompt = buildProxyPrompt({ userInput, recipient, language, tone });
+  const safePrompt = promptSet[language as keyof typeof promptSet] ?? promptSet['zh'];
+  const finalPrompt = `${safePrompt}
+
+請幫忙轉述使用者希望對「${recipient || '對方'}」表達的內容，語氣保持「${tone}」。
+
+使用者說：
+「${userInput}」
+
+請幫我寫成一段可以轉述的話，用你的語氣表達他的心聲。`;
+
+  console.log('[DEBUG] final prompt to OpenAI:', finalPrompt);
 
   const encoder = new TextEncoder();
   let fullReply = '';
@@ -88,13 +82,14 @@ export async function POST(req: NextRequest) {
           stream: true,
           temperature: 0.8,
           messages: [
-            { role: 'system', content: systemPrompt },
-            { role: 'user', content: prompt },
+            { role: 'system', content: 'You are a helpful AI who interprets and communicates on behalf of users.' },
+            { role: 'user', content: finalPrompt },
           ],
         }),
       });
 
       if (!response.ok || !response.body) {
+        console.error('[ERROR] OpenAI API failed:', response.status);
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'OpenAI request failed' })}\n\n`));
         controller.close();
         return;
@@ -125,7 +120,19 @@ export async function POST(req: NextRequest) {
               mode: 'proxy',
               tone,
               recipient,
+              role,
             });
+
+            if (forwardEmail) {
+              await resendEmail({
+                to: forwardEmail,
+                subject: `BridgeTalk 代轉使用者的心聲`,
+                body: `${fullReply}\n\n---\n📢 本訊息由 BridgeTalk AI 轉述使用者心聲，內容由使用者提供並自行負責，不代表本站立場。`,
+                userEmail,
+              });
+              console.log(`[DEBUG] Email sent to ${forwardEmail}`);
+            }
+
             return;
           }
 
@@ -134,7 +141,9 @@ export async function POST(req: NextRequest) {
             const delta = parsed.choices?.[0]?.delta?.content;
             if (delta) {
               fullReply += delta;
-              controller.enqueue(encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: delta } }] })}\n\n`));
+              controller.enqueue(
+                encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: delta } }] })}\n\n`)
+              );
             }
           } catch (err) {
             console.warn('Parse error:', err);

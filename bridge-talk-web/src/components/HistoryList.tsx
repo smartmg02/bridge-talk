@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { createClient } from '@/lib/supabase';
+import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 type Record = {
   id: number;
@@ -17,7 +19,17 @@ type Record = {
   role?: string;
 };
 
-export default function HistoryList({ userEmail, limit }: { userEmail: string; limit?: number }) {
+export default function HistoryList({
+  userEmail,
+  limit,
+  onSelect,
+  selectedId,
+}: {
+  userEmail: string;
+  limit?: number;
+  onSelect?: (id: string) => void;
+  selectedId?: string;
+}) {
   const [records, setRecords] = useState<Record[]>([]);
   const supabase = createClient();
 
@@ -58,7 +70,11 @@ export default function HistoryList({ userEmail, limit }: { userEmail: string; l
         <p className="text-gray-500">尚無紀錄。</p>
       ) : (
         records.map((r) => (
-          <div key={r.id} className="border p-3 rounded bg-white">
+          <div
+            key={r.id}
+            onClick={() => onSelect?.(r.id.toString())}
+            className={`border p-3 rounded cursor-pointer bg-white ${selectedId === r.id.toString() ? 'border-blue-500 bg-blue-50' : ''}`}
+          >
             <p className="text-sm text-gray-500">{new Date(r.created_at).toLocaleString()}</p>
             <p className="text-xs font-semibold text-blue-600">
               {r.mode === 'proxy' ? '📨 轉述訊息' : '🧠 回應訊息'}

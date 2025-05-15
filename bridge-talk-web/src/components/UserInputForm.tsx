@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from 'react';
 
 export default function UserInputForm({
@@ -11,6 +13,7 @@ export default function UserInputForm({
     tone: string;
     highlight: string;
     recipient?: string;
+    forwardEmail?: string;
     mode?: 'reply' | 'proxy';
   }) => void;
   mode: 'reply' | 'proxy';
@@ -20,10 +23,11 @@ export default function UserInputForm({
   const [role, setRole] = useState('bestie');
   const [tone, setTone] = useState('normal');
   const [recipient, setRecipient] = useState('');
+  const [forwardEmail, setForwardEmail] = useState('');
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ message, email: '', role, tone, highlight, recipient, mode });
+    onSubmit({ message, email: '', role, tone, highlight, recipient, forwardEmail, mode });
   };
 
   return (
@@ -50,16 +54,15 @@ export default function UserInputForm({
 
       {mode === 'reply' && (
         <div>
-          <label className="block mb-1 font-medium">選擇角色</label>
+          <label className="block mb-1 font-medium">語氣</label>
           <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
+            value={tone}
+            onChange={(e) => setTone(e.target.value)}
             className="w-full border rounded p-2"
           >
-            <option value="bestie">刀子嘴豆腐心的閨蜜</option>
-            <option value="rational">理性分析者</option>
-            <option value="listener">感性傾聽者</option>
-            {/* 可根據實際角色擴充 */}
+            <option value="soft">溫和</option>
+            <option value="normal">中性</option>
+            <option value="strong">強烈</option>
           </select>
         </div>
       )}
@@ -73,9 +76,10 @@ export default function UserInputForm({
               value={recipient}
               onChange={(e) => setRecipient(e.target.value)}
               className="w-full border rounded p-2"
-              placeholder="例如：他、她、你"
+              placeholder="例如：老公、老婆、主管、朋友、未來的自己"
             />
           </div>
+
           <div>
             <label className="block mb-1 font-medium">語氣</label>
             <select
@@ -87,6 +91,17 @@ export default function UserInputForm({
               <option value="normal">中性</option>
               <option value="strong">強烈</option>
             </select>
+          </div>
+
+          <div>
+            <label className="block mb-1 font-medium">若希望將內容寄出，請輸入收件人 Email：</label>
+            <input
+              type="email"
+              value={forwardEmail}
+              onChange={(e) => setForwardEmail(e.target.value)}
+              placeholder="選填：someone@example.com"
+              className="w-full border rounded p-2"
+            />
           </div>
         </>
       )}
