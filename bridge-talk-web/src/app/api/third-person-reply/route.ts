@@ -1,18 +1,14 @@
-// ✅ bridge-talk-web/src/app/api/third-person-reply/route.ts
 import { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import { rolePromptTemplates } from '@/constants/rolePromptTemplates';
+import { buildPrompt } from '@/utils/buildPrompt';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-
 if (!OPENAI_API_KEY) {
   throw new Error('❌ OPENAI_API_KEY is not set in .env.local');
 }
 
 export async function POST(req: NextRequest) {
-  console.log('[DEBUG] reply route handler triggered');
-
   const cookieStore = cookies() as unknown as { get(name: string): { value: string } | undefined };
 
   const supabase = createServerClient(
@@ -34,8 +30,6 @@ export async function POST(req: NextRequest) {
     error: userError,
   } = await supabase.auth.getUser();
 
-  console.log('[DEBUG] Supabase getUser:', { user, userError });
-
   if (!user?.email) {
     return new Response(JSON.stringify({ error: '⚠️ 找不到登入使用者 email' }), {
       status: 401,
@@ -45,10 +39,11 @@ export async function POST(req: NextRequest) {
 
   const email = user.email;
   const body = await req.json();
+
   const role = body.role as string;
   const highlight = body.highlight || '';
   const langParam = (body.language ?? 'zh') as string;
-  const tone = (body.tone ?? 'medium') as 'soft' | 'medium' | 'strong';
+  const tone = (body.tone ?? 'normal') as 'soft' | 'normal' | 'strong';
   const content = (body.content ?? body.message) as string;
 
   const validLanguages = ['zh', 'zh_cn', 'en'] as const;
@@ -57,24 +52,14 @@ export async function POST(req: NextRequest) {
     ? (langParam as ValidLanguage)
     : 'zh';
 
-  const promptSet = rolePromptTemplates[role];
-  if (!promptSet) {
-    return new Response(JSON.stringify({ error: '⚠️ 找不到對應角色' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  const toneDescriptions: Record<typeof tone, string> = {
-    soft: '語氣請保持溫和、體貼，避免過度批評或責備。',
-    medium: '語氣保持中立理性，同時不失溫度與同理。',
-    strong: '語氣可以直接、有力地表達不滿與情緒，強調立場與情感。',
-  };
-
-  const promptTemplate = promptSet[safeLanguage];
-  const finalPrompt = `${promptTemplate}\n\n${toneDescriptions[tone]}\n\n使用者的心聲：${content}\n\n${highlight ? `重點提示：${highlight}` : ''}`;
-
-  console.log('[DEBUG] final prompt to OpenAI:', finalPrompt);
+  const finalPrompt = buildPrompt({
+    mode: 'reply',
+    message: content,
+    highlight,
+    role,
+    tone,
+    language: safeLanguage,
+  });
 
   const openaiRes = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',

@@ -1,19 +1,23 @@
-// ✅ 修正 await cookies() 的版本：bridge-talk-web/src/app/api/third-person-message/route.ts
 import { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-import { rolePromptTemplates } from '@/constants/rolePromptTemplates';
 import { resendEmail } from '@/lib/resendEmail';
+import { buildPrompt } from '@/utils/buildPrompt';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
 
 export async function POST(req: NextRequest) {
-  console.log('[DEBUG] proxy route handler triggered');
-
-  const { userInput, language = 'zh', tone = '溫和', recipient = '', role = 'peacemaker', forwardEmail } = await req.json();
-  console.log('[DEBUG] request json:', { userInput, language, tone, recipient, role, forwardEmail });
+  const {
+    userInput,
+    language = 'zh',
+    tone = 'normal',
+    recipient = '',
+    role = 'bestie',
+    forwardEmail,
+    highlight = '',
+  } = await req.json();
 
   const cookieStore = await cookies();
   const supabase = createServerClient(
@@ -35,8 +39,6 @@ export async function POST(req: NextRequest) {
     error: userError,
   } = await supabase.auth.getUser();
 
-  console.log('[DEBUG] Supabase getUser:', { user, userError });
-
   if (!user?.email) {
     return new Response(JSON.stringify({ error: '⚠️ 找不到登入使用者 email' }), {
       status: 401,
@@ -45,26 +47,17 @@ export async function POST(req: NextRequest) {
   }
 
   const userEmail = user.email;
-  const promptSet = rolePromptTemplates[role];
 
-  if (!promptSet) {
-    return new Response(JSON.stringify({ error: '⚠️ 找不到對應角色' }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' },
-    });
-  }
-
-  const safePrompt = promptSet[language as keyof typeof promptSet] ?? promptSet['zh'];
-  const finalPrompt = `${safePrompt}
-
-請幫忙轉述使用者希望對「${recipient || '對方'}」表達的內容，語氣保持「${tone}」。
-
-使用者說：
-「${userInput}」
-
-請幫我寫成一段可以轉述的話，用你的語氣表達他的心聲。`;
-
-  console.log('[DEBUG] final prompt to OpenAI:', finalPrompt);
+  // ✅ 使用新版 buildPrompt 組裝 proxy 專用語氣
+  const finalPrompt = buildPrompt({
+    mode: 'proxy',
+    message: userInput,
+    highlight,
+    role,
+    tone: tone as 'soft' | 'normal' | 'strong',
+    recipient,
+    language,
+  });
 
   const encoder = new TextEncoder();
   let fullReply = '';
@@ -82,14 +75,15 @@ export async function POST(req: NextRequest) {
           stream: true,
           temperature: 0.8,
           messages: [
-            { role: 'system', content: 'You are a helpful AI who interprets and communicates on behalf of users.' },
-            { role: 'user', content: finalPrompt },
+            {
+              role: 'system',
+              content: finalPrompt,
+            },
           ],
         }),
       });
 
       if (!response.ok || !response.body) {
-        console.error('[ERROR] OpenAI API failed:', response.status);
         controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'OpenAI request failed' })}\n\n`));
         controller.close();
         return;
@@ -113,6 +107,7 @@ export async function POST(req: NextRequest) {
             controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
             controller.close();
 
+            // ✅ 儲存歷史紀錄
             await supabaseAdmin.from('records').insert({
               user_email: userEmail,
               message: userInput,
@@ -121,8 +116,10 @@ export async function POST(req: NextRequest) {
               tone,
               recipient,
               role,
+              highlight,
             });
 
+            // ✅ 如有需要，寄送 Email
             if (forwardEmail) {
               await resendEmail({
                 to: forwardEmail,
@@ -130,7 +127,6 @@ export async function POST(req: NextRequest) {
                 body: `${fullReply}\n\n---\n📢 本訊息由 BridgeTalk AI 轉述使用者心聲，內容由使用者提供並自行負責，不代表本站立場。`,
                 userEmail,
               });
-              console.log(`[DEBUG] Email sent to ${forwardEmail}`);
             }
 
             return;

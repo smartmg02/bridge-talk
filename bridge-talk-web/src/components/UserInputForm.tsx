@@ -30,8 +30,24 @@ export default function UserInputForm({
     onSubmit({ message, email: '', role, tone, highlight, recipient, forwardEmail, mode });
   };
 
+  const renderToneSelector = () => (
+    <div>
+      <label className="block mb-1 font-medium">語氣</label>
+      <select
+        value={tone}
+        onChange={(e) => setTone(e.target.value)}
+        className="w-full border rounded p-2"
+      >
+        <option value="soft">溫和</option>
+        <option value="normal">中性</option>
+        <option value="strong">強烈</option>
+      </select>
+    </div>
+  );
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {/* 心聲輸入 */}
       <div>
         <label className="block mb-1 font-medium">請輸入你的心聲</label>
         <textarea
@@ -42,6 +58,7 @@ export default function UserInputForm({
         />
       </div>
 
+      {/* 重點 highlight */}
       <div>
         <label className="block mb-1 font-medium">想突顯的重點（可選）</label>
         <input
@@ -52,21 +69,10 @@ export default function UserInputForm({
         />
       </div>
 
-      {mode === 'reply' && (
-        <div>
-          <label className="block mb-1 font-medium">語氣</label>
-          <select
-            value={tone}
-            onChange={(e) => setTone(e.target.value)}
-            className="w-full border rounded p-2"
-          >
-            <option value="soft">溫和</option>
-            <option value="normal">中性</option>
-            <option value="strong">強烈</option>
-          </select>
-        </div>
-      )}
+      {/* 通用語氣選單 */}
+      {renderToneSelector()}
 
+      {/* Proxy 模式下才顯示的欄位 */}
       {mode === 'proxy' && (
         <>
           <div>
@@ -78,19 +84,6 @@ export default function UserInputForm({
               className="w-full border rounded p-2"
               placeholder="例如：老公、老婆、主管、朋友、未來的自己"
             />
-          </div>
-
-          <div>
-            <label className="block mb-1 font-medium">語氣</label>
-            <select
-              value={tone}
-              onChange={(e) => setTone(e.target.value)}
-              className="w-full border rounded p-2"
-            >
-              <option value="soft">溫和</option>
-              <option value="normal">中性</option>
-              <option value="strong">強烈</option>
-            </select>
           </div>
 
           <div>
