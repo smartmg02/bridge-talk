@@ -1,7 +1,7 @@
 import { NextRequest } from 'next/server';
 import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import { buildPrompt } from '@/utils/buildPrompt';
+import { buildPromptMessages, RoleKey } from '@/utils/buildPromptMessages';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 if (!OPENAI_API_KEY) {
@@ -27,7 +27,6 @@ export async function POST(req: NextRequest) {
 
   const {
     data: { user },
-    error: userError,
   } = await supabase.auth.getUser();
 
   if (!user?.email) {
@@ -40,11 +39,21 @@ export async function POST(req: NextRequest) {
   const email = user.email;
   const body = await req.json();
 
-  const role = body.role as string;
+  const role = body.role as RoleKey;
   const highlight = body.highlight || '';
   const langParam = (body.language ?? 'zh') as string;
   const tone = (body.tone ?? 'normal') as 'soft' | 'normal' | 'strong';
   const content = (body.content ?? body.message) as string;
+
+  const MAX_LENGTH = 1200;
+  if (content.length > MAX_LENGTH) {
+    return new Response(JSON.stringify({
+      error: `⚠️ 輸入內容過長（${content.length} 字），請壓縮至 ${MAX_LENGTH} 字以內。`
+  }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
 
   const validLanguages = ['zh', 'zh_cn', 'en'] as const;
   type ValidLanguage = typeof validLanguages[number];
@@ -52,7 +61,7 @@ export async function POST(req: NextRequest) {
     ? (langParam as ValidLanguage)
     : 'zh';
 
-  const finalPrompt = buildPrompt({
+  const { system, instruction, userMessage } = buildPromptMessages({
     mode: 'reply',
     message: content,
     highlight,
@@ -71,7 +80,11 @@ export async function POST(req: NextRequest) {
       model: 'gpt-4',
       temperature: 0.8,
       stream: true,
-      messages: [{ role: 'system', content: finalPrompt }],
+      messages: [
+        { role: 'system', content: system },
+        { role: 'user', content: instruction },
+        { role: 'user', content: `使用者的心聲如下：「${userMessage}」` },
+      ],
     }),
   });
 

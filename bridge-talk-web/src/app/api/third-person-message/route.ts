@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { resendEmail } from '@/lib/resendEmail';
-import { buildPrompt } from '@/utils/buildPrompt';
+import { buildPromptMessages } from '@/utils/buildPromptMessages';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
@@ -19,7 +19,19 @@ export async function POST(req: NextRequest) {
     highlight = '',
   } = await req.json();
 
+  const MAX_LENGTH = 1200;
+  if (userInput.length > MAX_LENGTH) {
+    return new Response(JSON.stringify({
+      error: `⚠️ 輸入內容過長（${userInput.length} 字），請壓縮至 ${MAX_LENGTH} 字以內。`
+    }), {
+      status: 400,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  // ✅ 修正：使用 await cookies() 避免 TS 錯誤
   const cookieStore = await cookies();
+
   const supabase = createServerClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
@@ -36,7 +48,6 @@ export async function POST(req: NextRequest) {
 
   const {
     data: { user },
-    error: userError,
   } = await supabase.auth.getUser();
 
   if (!user?.email) {
@@ -48,13 +59,12 @@ export async function POST(req: NextRequest) {
 
   const userEmail = user.email;
 
-  // ✅ 使用新版 buildPrompt 組裝 proxy 專用語氣
-  const finalPrompt = buildPrompt({
+  const { system, instruction, userMessage } = buildPromptMessages({
     mode: 'proxy',
     message: userInput,
     highlight,
     role,
-    tone: tone as 'soft' | 'normal' | 'strong',
+    tone,
     recipient,
     language,
   });
@@ -75,10 +85,9 @@ export async function POST(req: NextRequest) {
           stream: true,
           temperature: 0.8,
           messages: [
-            {
-              role: 'system',
-              content: finalPrompt,
-            },
+            { role: 'system', content: system },
+            { role: 'user', content: instruction },
+            { role: 'user', content: `使用者的心聲如下：「${userMessage}」` },
           ],
         }),
       });
@@ -107,7 +116,6 @@ export async function POST(req: NextRequest) {
             controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
             controller.close();
 
-            // ✅ 儲存歷史紀錄
             await supabaseAdmin.from('records').insert({
               user_email: userEmail,
               message: userInput,
@@ -119,7 +127,6 @@ export async function POST(req: NextRequest) {
               highlight,
             });
 
-            // ✅ 如有需要，寄送 Email
             if (forwardEmail) {
               await resendEmail({
                 to: forwardEmail,
