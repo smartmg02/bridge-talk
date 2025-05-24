@@ -1,15 +1,22 @@
 'use client';
 
 import { useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 import { createClient } from '@/lib/supabase';
 
 import Button from '@/components/buttons/Button';
 import UserInputForm from '@/components/UserInputForm';
 
+import { roleOptions } from '@/constant/roleOptions';
+
 export default function HomePage() {
   const [userEmail, setUserEmail] = useState('');
+  const [reply, setReply] = useState('');
+  const [mode, setMode] = useState<'reply' | 'proxy'>('reply');
+  const role = roleOptions[0]?.value || 'bestie';
+  const [isLoading, setIsLoading] = useState(false);
+  const replyRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const supabase = createClient();
 
@@ -24,7 +31,7 @@ export default function HomePage() {
     fetchSession();
   }, [supabase]);
 
-  const handleSubmit = (data: {
+  const handleSubmit = async (data: {
     message: string;
     email: string;
     role: string;
@@ -33,8 +40,63 @@ export default function HomePage() {
     recipient?: string;
     mode?: 'reply' | 'proxy';
   }) => {
-    // eslint-disable-next-line no-console
-    console.log('📨 提交資料:', data);
+    try {
+      setReply('');
+      setIsLoading(true);
+
+      const currentMode = data.mode ?? 'reply';
+      const endpoint =
+        currentMode === 'reply'
+          ? '/api/third-person-reply'
+          : '/api/third-person-message';
+
+      const payload = {
+        ...data,
+        userInput: data.message,
+      };
+
+      const res = await fetch(endpoint, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.body) throw new Error('⚠️ 沒有接收到串流資料');
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder('utf-8');
+      let done = false;
+
+      while (!done) {
+        const { value, done: readerDone } = await reader.read();
+        done = readerDone;
+
+        const chunk = decoder.decode(value);
+        const lines = chunk.split('\n');
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const json = line.replace(/^data: /, '');
+            if (json === '[DONE]') break;
+            try {
+              const parsed = JSON.parse(json);
+              const delta = parsed.choices?.[0]?.delta?.content;
+              if (delta) {
+                setReply((prev) => prev + delta);
+                setTimeout(() => {
+                  replyRef.current?.scrollIntoView({ behavior: 'smooth' });
+                }, 0);
+              }
+            } catch (_) {
+              // 忽略解析錯誤以避免中斷串流
+            }
+          }
+        }
+      }
+    } catch (err) {
+      setReply('⚠️ 系統錯誤，請稍後再試');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -49,12 +111,43 @@ export default function HomePage() {
           </Button>
         </div>
 
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">選擇模式</label>
+          <select
+            value={mode}
+            onChange={(e) => {
+              setReply('');
+              setMode(e.target.value as 'reply' | 'proxy');
+            }}
+            className="w-full border border-gray-300 rounded-lg px-4 py-2"
+          >
+            <option value="reply">🧠 第三人稱 AI 回應</option>
+            <option value="proxy">📨 訊息轉述給對方</option>
+          </select>
+        </div>
+
         <UserInputForm
-          onSubmit={handleSubmit}
-          mode="reply"
+          onSubmit={(data) => handleSubmit({ ...data, role })}
+          mode={mode}
           maxMessageLength={800}
           maxHighlightLength={100}
         />
+
+        {isLoading && (
+          <div className="text-center text-gray-500 animate-pulse">
+            AI 回應產生中...
+          </div>
+        )}
+
+        {reply && (
+          <div
+            ref={replyRef}
+            className="mt-6 bg-white rounded-xl shadow-md border border-gray-200 p-6"
+          >
+            <h2 className="text-lg font-semibold mb-2">AI 回應結果</h2>
+            <p className="text-gray-800 whitespace-pre-line leading-relaxed">{reply}</p>
+          </div>
+        )}
       </div>
     </main>
   );

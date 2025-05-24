@@ -45,6 +45,11 @@ export default function UserInputForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (!message.trim()) return;
+    if (mode === 'proxy' && !recipient.trim()) {
+      alert('⚠️ Proxy 模式下請輸入收件人名稱');
+      return;
+    }
     onSubmit({
       message,
       email: '',
@@ -113,9 +118,7 @@ export default function UserInputForm({
 
       <div className="flex gap-4">
         <div className="w-2/3">
-          <label className="block mb-1 font-medium text-black">
-            角色風格
-          </label>
+          <label className="block mb-1 font-medium text-black">角色風格</label>
           <select
             value={role}
             onChange={(e) => setRole(e.target.value)}
@@ -143,11 +146,12 @@ export default function UserInputForm({
 
       {mode === 'proxy' && (
         <div className="p-4 border border-gray-200 rounded shadow-sm bg-white">
-          <label className="block mb-1 font-medium">收件人</label>
+          <label className="block mb-1 font-medium">收件人 <span className="text-red-500">*</span></label>
           <select
             className="w-full border border-gray-300 rounded p-2 mb-2 text-black bg-white"
             value={recipient}
             onChange={(e) => setRecipient(e.target.value)}
+            required
           >
             <option value="">請選擇收件人（可自訂）</option>
             {recipientOptions.map((opt) => (
@@ -162,6 +166,7 @@ export default function UserInputForm({
             onChange={(e) => setRecipient(e.target.value.slice(0, 20))}
             className="w-full border border-gray-300 rounded p-2"
             placeholder="也可以自訂收件人"
+            required
           />
         </div>
       )}
