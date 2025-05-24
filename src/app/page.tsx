@@ -15,8 +15,13 @@ export default function HomePage() {
   const [userEmail, setUserEmail] = useState('');
   const [reply, setReply] = useState('');
   const [mode, setMode] = useState<'reply' | 'proxy'>('reply');
-  const role = roleOptions[0]?.value || 'bestie';
+  const [role, setRole] = useState(roleOptions[0]?.value || 'bestie');
+  const [tone, setTone] = useState<'soft' | 'normal' | 'strong'>('normal');
+  const [recipient, setRecipient] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [historyPreview, setHistoryPreview] = useState<
+    { id: string; message: string; created_at: string }[]
+  >([]);
   const replyRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
   const supabase = createClient();
@@ -27,10 +32,21 @@ export default function HomePage() {
       const session = data.session;
       if (session?.user?.email) {
         setUserEmail(session.user.email);
+        fetchHistory(session.user.email);
       }
     };
     fetchSession();
   }, [supabase]);
+
+  const fetchHistory = async (email: string) => {
+    const { data } = await supabase
+      .from('records')
+      .select('id, message, created_at')
+      .eq('user_email', email)
+      .order('created_at', { ascending: false })
+      .limit(3);
+    if (data) setHistoryPreview(data);
+  };
 
   const handleSubmit = async (data: {
     message: string;
@@ -53,6 +69,9 @@ export default function HomePage() {
 
       const payload = {
         ...data,
+        role,
+        tone,
+        recipient: currentMode === 'reply' ? '我自己' : recipient,
         userInput: data.message,
       };
 
@@ -80,43 +99,98 @@ export default function HomePage() {
   return (
     <main className="min-h-screen bg-gradient-to-b from-green-300 to-white py-12 px-4">
       <div className="max-w-3xl mx-auto space-y-6">
+        {/* 登入狀態 + 查看歷史 */}
         <div className="flex justify-between items-center">
           <div className="text-sm text-gray-600">
             {userEmail ? `登入中帳號：${userEmail}` : '尚未登入'}
           </div>
           <Button variant="outline" onClick={() => router.push('/history')}>
-            查看歷史紀錄
+            查看更多
           </Button>
         </div>
 
-        <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">選擇模式</label>
-          <select
-            value={mode}
-            onChange={(e) => {
+        {/* 模式切換 */}
+        <div className="grid grid-cols-2 gap-2">
+          <Button
+            variant={mode === 'reply' ? 'default' : 'outline'}
+            onClick={() => {
+              setMode('reply');
               setReply('');
-              setMode(e.target.value as 'reply' | 'proxy');
             }}
-            className="w-full border border-gray-300 rounded-lg px-4 py-2"
           >
-            <option value="reply">🧠 第三人稱 AI 回應</option>
-            <option value="proxy">📨 訊息轉述給對方</option>
-          </select>
+            AI 聽懂你的心聲（Reply 模式）
+          </Button>
+          <Button
+            variant={mode === 'proxy' ? 'default' : 'outline'}
+            onClick={() => {
+              setMode('proxy');
+              setReply('');
+            }}
+          >
+            AI 援你幫你出頭（Proxy 模式）
+          </Button>
         </div>
 
+        {/* 角色與語氣 */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              選 AI 角色
+            </label>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2"
+            >
+              {roleOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              AI 語氣強度
+            </label>
+            <select
+              value={tone}
+              onChange={(e) => setTone(e.target.value as 'soft' | 'normal' | 'strong')}
+              className="w-full border border-gray-300 rounded-lg px-4 py-2"
+            >
+              <option value="soft">🌸 溫和</option>
+              <option value="normal">🗣️ 一般</option>
+              <option value="strong">🔥 強烈</option>
+            </select>
+          </div>
+        </div>
+
+        {/* 輸入表單 */}
         <UserInputForm
-          onSubmit={(data) => handleSubmit({ ...data, role })}
+          onSubmit={(data) =>
+            handleSubmit({
+              ...data,
+              role,
+              tone,
+              recipient: mode === 'reply' ? '我自己' : recipient,
+              mode,
+            })
+          }
           mode={mode}
           maxMessageLength={800}
           maxHighlightLength={100}
+          recipient={recipient}
+          onRecipientChange={(value) => setRecipient(value)}
+          disableRecipient={mode === 'reply'}
         />
 
+        {/* AI 回應區塊 */}
         {isLoading && (
           <div className="text-center text-gray-500 animate-pulse">
             AI 回應產生中...
           </div>
         )}
-
         {reply && (
           <div
             ref={replyRef}
@@ -126,6 +200,23 @@ export default function HomePage() {
             <p className="text-gray-800 whitespace-pre-line leading-relaxed">
               {reply}
             </p>
+          </div>
+        )}
+
+        {/* 歷史紀錄摘要 */}
+        {historyPreview.length > 0 && (
+          <div className="mt-8">
+            <h3 className="text-md font-semibold mb-2 text-gray-700">歷史紀錄</h3>
+            <ul className="space-y-3">
+              {historyPreview.map((item) => (
+                <li
+                  key={item.id}
+                  className="bg-white border rounded-lg p-4 shadow-sm text-sm text-gray-700"
+                >
+                  {item.message.slice(0, 80)}...
+                </li>
+              ))}
+            </ul>
           </div>
         )}
       </div>
