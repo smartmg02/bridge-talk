@@ -197,26 +197,7 @@ export default function HomePage() {
             className="mt-6 bg-white rounded-xl shadow-md border border-gray-200 p-6"
           >
             <h2 className="text-lg font-semibold mb-2">AI 回應結果</h2>
-            <p className="text-gray-800 whitespace-pre-line leading-relaxed">
-              {reply}
-            </p>
-          </div>
-        )}
-
-        {/* 歷史紀錄摘要 */}
-        {historyPreview.length > 0 && (
-          <div className="mt-8">
-            <h3 className="text-md font-semibold mb-2 text-gray-700">歷史紀錄</h3>
-            <ul className="space-y-3">
-              {historyPreview.map((item) => (
-                <li
-                  key={item.id}
-                  className="bg-white border rounded-lg p-4 shadow-sm text-sm text-gray-700"
-                >
-                  {item.message.slice(0, 80)}...
-                </li>
-              ))}
-            </ul>
+            <p className="text-gray-800 whitespace-pre-line leading-relaxed">{reply}</p>
           </div>
         )}
       </div>
