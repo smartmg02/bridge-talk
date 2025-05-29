@@ -1,10 +1,11 @@
+//src/app/api/third-person-message/route.ts
+
 import { createServerClient } from '@supabase/ssr';
 import { cookies as nextCookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
-import { ProxyRole } from '@/constant/proxyRoleTemplates';
 import { buildProxyPrompt } from '@/utils/buildProxyPrompt';
 import { streamWithEarlyCutoff } from '@/utils/streamWithEarlyCutoff';
 
@@ -64,9 +65,10 @@ export async function POST(req: NextRequest) {
   try {
     messages = buildProxyPrompt({
       userInput,
-      role: role as ProxyRole,
+      role,
       tone,
       highlight,
+      recipient,
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: '⚠️ 無效角色或 prompt 組裝失敗' }), {

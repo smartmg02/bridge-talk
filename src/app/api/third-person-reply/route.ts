@@ -1,13 +1,10 @@
-// src/app/api/third-person-reply/route.ts
-
 import { createServerClient } from '@supabase/ssr';
 import { cookies as nextCookies } from 'next/headers';
 import { NextRequest } from 'next/server';
-import { TextDecoder,TextEncoder } from 'util';
+import { TextDecoder, TextEncoder } from 'util';
 
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 
-import { replyRoleTemplates } from '@/constant/replyRoleTemplates';
 import { buildReplyPrompt } from '@/utils/buildReplyPrompt';
 import { logWarn } from '@/utils/logger';
 
@@ -53,18 +50,20 @@ export async function POST(req: NextRequest) {
   }
 
   const userEmail = user.email;
-  const roleKey = role as keyof typeof replyRoleTemplates;
-  const roleConfig = replyRoleTemplates[roleKey];
-  if (!roleConfig) {
-    return new Response('⚠️ 無效角色', { status: 400 });
-  }
 
-  const { system, userMessage } = buildReplyPrompt({
-    message,
-    highlight,
-    role,
-    tone,
-  });
+  let system: string, userMessage: string;
+  try {
+    const prompt = buildReplyPrompt({
+      message,
+      highlight,
+      role,
+      tone,
+    });
+    system = prompt.system;
+    userMessage = prompt.userMessage;
+  } catch (err) {
+    return new Response('⚠️ 無效角色或 prompt 組裝失敗', { status: 400 });
+  }
 
   const encoder = new TextEncoder();
   let fullReply = '';
