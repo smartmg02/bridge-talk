@@ -1,72 +1,60 @@
+// /src/app/api/third-person-reply/route.ts
+
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
-import { cookies as nextCookies } from 'next/headers';
-import { NextRequest } from 'next/server';
-import { TextDecoder, TextEncoder } from 'util';
 
-import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { buildReplyPrompt } from '@/utils/buildReplyPrompt';
-import { logWarn } from '@/utils/logger';
+import { rolePromptTemplates } from '@/constant/rolePromptTemplates';
+import { deduplicateReply } from '@/utils/deduplicateReply';
+import { checkRepeat } from '@/utils/checkRepeat';
 
-const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-if (!OPENAI_API_KEY) throw new Error('❌ OPENAI_API_KEY is not set in .env.local');
+const OPENAI_API_KEY = process.env.OPENAI_API_KEY!;
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
-const noop = () => undefined;
+if (!OPENAI_API_KEY || !SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  throw new Error(
+    '❌ 缺少必要環境變數 (OPENAI_API_KEY / SUPABASE_URL / SUPABASE_ANON_KEY)'
+  );
+}
 
 export async function POST(req: NextRequest) {
-  const { message, tone = 'normal', role = 'bestie', highlight = '' } = await req.json();
-
-  const userInput = typeof message === 'string' ? message.trim() : '';
-  const MAX_LENGTH = 1200;
-  if (!userInput || userInput.length > MAX_LENGTH) {
-    return new Response(
-      `⚠️ 輸入內容無效或過長（${userInput.length} 字），請壓縮至 ${MAX_LENGTH} 字內。`,
-      { status: 400 }
-    );
-  }
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-  if (!supabaseUrl || !supabaseKey) {
-    return new Response('❌ Supabase 環境變數未設定', { status: 500 });
-  }
-
-  const cookieStore = nextCookies();
-  const supabase = createServerClient(supabaseUrl, supabaseKey, {
-    cookies: {
-      get: (name: string) => cookieStore.get(name)?.value,
-      set: noop,
-      remove: noop,
-    },
-  });
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user?.email) {
-    return new Response('⚠️ 找不到登入使用者 email', { status: 401 });
-  }
-
-  let system: string, userMessage: string;
   try {
-    const prompt = buildReplyPrompt({
-      message: userInput,
-      highlight: typeof highlight === 'string' ? highlight : '',
+    const {
+      message,
+      role = 'bestie',
+      tone = 'normal',
+      lang = 'zh',
+      email,
+    } = await req.json();
+
+    if (!message || typeof message !== 'string') {
+      return NextResponse.json(
+        { error: '❌ 請提供 message 欄位' },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createServerClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      cookies: cookies(),
+    });
+
+    // 組合 Prompt
+    const { system, userMessage } = buildReplyPrompt({
+      message,
       role,
       tone,
+      lang,
     });
-    system = prompt.system;
-    userMessage = prompt.userMessage;
-  } catch (err) {
-    return new Response('⚠️ 無效角色或 prompt 組裝失敗', { status: 400 });
-  }
 
-  const encoder = new TextEncoder();
-  let fullReply = '';
-  let sentFinalOutput = false;
+    console.log('🧠 [GPT System Prompt]\n' + system);
+    console.log('📝 [GPT User Message]\n' + userMessage);
 
-  const stream = new ReadableStream({
-    async start(controller) {
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
+    // 呼叫 OpenAI API（非串流）
+    const completionRes = await fetch(
+      'https://api.openai.com/v1/chat/completions',
+      {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -74,79 +62,55 @@ export async function POST(req: NextRequest) {
         },
         body: JSON.stringify({
           model: 'gpt-3.5-turbo',
-          stream: true,
-          temperature: tone === 'strong' ? 1 : tone === 'soft' ? 0.3 : 0.7,
-          max_tokens: 500,
           messages: [
             { role: 'system', content: system },
             { role: 'user', content: userMessage },
           ],
+          temperature: 0.7,
         }),
+      }
+    );
+
+    const completionJson = await completionRes.json();
+    const rawReply = completionJson.choices?.[0]?.message?.content?.trim();
+
+    if (!rawReply) {
+      return NextResponse.json(
+        { error: '⚠️ 沒有接收到有效內容' },
+        { status: 500 }
+      );
+    }
+
+    // 去除重複內容與簡化
+    const dedupedReply = deduplicateReply(rawReply);
+    const isRepeat = checkRepeat(dedupedReply);
+    const finalReply = isRepeat
+      ? dedupedReply.slice(0, dedupedReply.length / 2)
+      : dedupedReply;
+
+    console.log('💬 [AI Reply]\n' + finalReply);
+
+    // 儲存紀錄
+    if (email) {
+      const { error, status } = await supabase.from('records').insert({
+        mode: 'reply',
+        user_email: email,
+        user_input: message,
+        ai_response: finalReply,
+        role,
+        tone,
       });
 
-      if (!response.ok || !response.body) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: '❌ OpenAI request failed' })}\n\n`));
-        controller.close();
-        return;
+      if (error) {
+        console.error('❌ 寫入 Supabase records 失敗：', error.message);
+      } else {
+        console.log('✅ 已成功寫入 records 資料表。狀態碼:', status);
       }
+    }
 
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder('utf-8');
-      let buffer = '';
-
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split('\n');
-        buffer = lines.pop() || '';
-
-        for (const line of lines) {
-          const clean = line.replace(/^data: /, '').trim();
-
-          if (clean === '[DONE]' && !sentFinalOutput) {
-            controller.enqueue(
-              encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: fullReply } }] })}\n\n`)
-            );
-            controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
-            controller.close();
-            sentFinalOutput = true;
-
-            await supabaseAdmin.from('records').insert({
-              user_email: user.email,
-              message: userInput,
-              gpt_reply: fullReply,
-              mode: 'reply',
-              tone,
-              role,
-              highlight,
-            });
-            return;
-          }
-
-          try {
-            const parsed = JSON.parse(clean);
-            const delta = parsed.choices?.[0]?.delta?.content;
-            if (delta) {
-              fullReply += delta;
-              controller.enqueue(
-                encoder.encode(`data: ${JSON.stringify({ choices: [{ delta: { content: delta } }] })}\n\n`)
-              );
-            }
-          } catch (err) {
-            logWarn(err, '⚠️ 回應解析錯誤');
-          }
-        }
-      }
-    },
-  });
-
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    },
-  });
+    return NextResponse.json({ reply: finalReply });
+  } catch (error) {
+    console.error('❌ route.ts error:', error);
+    return NextResponse.json({ error: '❌ 伺服器錯誤' }, { status: 500 });
+  }
 }

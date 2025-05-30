@@ -1,6 +1,6 @@
 export const roleOptions = [
-  { value: 'bestie', label: '毒舌閨蜜' },
-  { value: 'analyst', label: '理性分析師' },
-  { value: 'cheerleader', label: '打氣朋友' },
-  { value: 'dramatic', label: '戲劇化朋友' },
+  { value: 'bestie', label: '心直嘴快閨蜜' },
+  { value: 'analyst', label: '淡定分析師朋友' },
+  { value: 'cheerleader', label: '情義相挺好兄弟' },
+  { value: 'dramatic', label: '戲精亂入路人朋友' },
 ];

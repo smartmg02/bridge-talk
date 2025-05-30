@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback,useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import { createClient } from '@/lib/supabase';
 
@@ -24,19 +24,31 @@ export default function AuthStatus() {
     fetchSession();
   }, [fetchSession]);
 
+  const handleLogin = async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: 'google',
+    });
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     window.location.reload();
   };
 
-  if (!email) return null;
-
   return (
     <div className="absolute top-4 right-4 flex items-center space-x-4 text-sm">
-      <span>👤 {email}</span>
-      <Button onClick={handleLogout} variant="ghost">
-        登出
-      </Button>
+      {email ? (
+        <>
+          <span>👤 {email}</span>
+          <Button onClick={handleLogout} variant="ghost">
+            登出
+          </Button>
+        </>
+      ) : (
+        <Button onClick={handleLogin} variant="primary">
+          使用 Google 登入
+        </Button>
+      )}
     </div>
   );
 }
