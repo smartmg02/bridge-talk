@@ -14,6 +14,7 @@ export default function HomePage() {
   const [reply, setReply] = useState('');
   const [mode, setMode] = useState<'proxy' | 'reply'>('reply');
   const [userEmail, setUserEmail] = useState('');
+  const [loading, setLoading] = useState(false);
   const router = useRouter();
   const supabase = createClient();
 
@@ -44,46 +45,38 @@ export default function HomePage() {
     recipient?: string;
     mode?: 'reply' | 'proxy';
   }) => {
-    setReply('');
+    if (!userEmail) return;
+
+    // Step 1: Debug log - 檢查送出內容
+    console.log('[前端送出]', {
+      message,
+      role,
+      tone,
+      recipient,
+      mode: submitMode,
+      email: userEmail,
+    });
+
+    setLoading(true);
+    setReply('AI 回應產出中...');
 
     const res = await fetch(`/api/third-person-${submitMode === 'proxy' ? 'message' : 'reply'}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message, tone, role, recipient }),
+      body: JSON.stringify({ message, tone, role, recipient, email: userEmail }),
     });
 
-    if (!res.ok || !res.body) {
-      const errorText = await res.text();
-      setReply(`⚠️ 產生失敗：${errorText}`);
+    const data = await res.json();
+    setLoading(false);
+
+    if (!res.ok) {
+      console.warn('[❌ 回應失敗]', data);
+      setReply(`⚠️ 產生失敗：${data.error || '未知錯誤'}`);
       return;
     }
 
-    const reader = res.body.getReader();
-    const decoder = new TextDecoder();
-
-    let done = false;
-    while (!done) {
-      const { value, done: readerDone } = await reader.read();
-      done = readerDone;
-
-      const chunk = decoder.decode(value);
-      const lines = chunk.split('\n');
-
-      for (const line of lines) {
-        const trimmed = line.replace(/^data: /, '').trim();
-        if (!trimmed || trimmed === '[DONE]') continue;
-
-        try {
-          const json = JSON.parse(trimmed);
-          const content = json.choices?.[0]?.delta?.content;
-          if (content) {
-            setReply((prev) => prev + content);
-          }
-        } catch {
-          // 忽略錯誤格式資料
-        }
-      }
-    }
+    console.log('[✅ 回應成功]', data.reply);
+    setReply(data.reply);
   };
 
   return (
@@ -108,21 +101,27 @@ export default function HomePage() {
       </div>
 
       <div className="max-w-2xl mx-auto mb-8">
-        <UserInputForm
-          onSubmit={handleSubmit}
-          mode={mode}
-          maxMessageLength={800}
-          disableRecipient={mode === 'reply'}
-          recipientOptions={recipientOptions}
-        />
+        {userEmail ? (
+          <UserInputForm
+            onSubmit={handleSubmit}
+            mode={mode}
+            maxMessageLength={800}
+            disableRecipient={mode === 'reply'}
+            recipientOptions={recipientOptions}
+          />
+        ) : (
+          <div className="text-center text-gray-600 p-4 border border-gray-300 rounded">
+            請先登入才能輸入心聲 ✨
+          </div>
+        )}
       </div>
 
-      {reply && (
-        <div className="max-w-2xl mx-auto mt-10 p-6 bg-white border border-gray-300 rounded">
-          <h4 className="text-md font-semibold mb-2">AI 回應</h4>
-          <p className="whitespace-pre-wrap text-sm text-gray-800">{reply}</p>
-        </div>
-      )}
+      <div className="max-w-2xl mx-auto mt-10 p-6 bg-white border border-gray-300 rounded min-h-[120px]">
+        <h4 className="text-md font-semibold mb-2">AI 回應</h4>
+        <p className="whitespace-pre-wrap text-sm text-gray-800">
+          {loading && !reply ? 'AI 回應產出中...' : reply}
+        </p>
+      </div>
 
       <div className="max-w-2xl mx-auto mt-8">
         <h3 className="text-lg font-semibold mb-2">最近紀錄預覽</h3>

@@ -2,7 +2,6 @@ import { rolePromptTemplates } from '@/constant/rolePromptTemplates';
 
 interface BuildReplyPromptOptions {
   message: string;
-  highlight?: string;
   role?: keyof typeof rolePromptTemplates;
   tone?: 'soft' | 'normal' | 'strong';
   lang?: 'zh';
@@ -10,7 +9,6 @@ interface BuildReplyPromptOptions {
 
 export function buildReplyPrompt({
   message,
-  highlight = '',
   role = 'bestie',
   tone = 'normal',
   lang = 'zh',
@@ -20,7 +18,7 @@ export function buildReplyPrompt({
 } {
   const roleData = rolePromptTemplates[role]?.[lang]?.reply;
 
-  if (!roleData) {
+  if (!roleData?.persona || !roleData?.styleTips) {
     throw new Error(`⚠️ 無效角色 ${role} 或缺少 reply 模式設定`);
   }
 
@@ -29,15 +27,28 @@ export function buildReplyPrompt({
 🎭 人格設定：${roleData.persona}
 🗣️ 風格建議：${roleData.styleTips}
 
-請以「${role}」的語氣回應使用者的心聲，扮演她的朋友或陪伴者角色。
+請你扮演這樣的朋友角色，回應使用者的心聲。
 
-📌 語氣強度：${tone}
-📌 回應請具備情緒支持、理解與行動建議。
-📌 禁止使用泛泛而談的建議（如「多溝通、多包容」），請具體、真誠、溫暖。`;
+⚠️ 注意：
+- **不要使用「${role}」這個詞來稱呼使用者**，也不要在回應中提及你的角色名稱。
+- 請以朋友的身份回應使用者，而不是 AI 或機器人。
+- 回應必須真誠、具情緒張力，讓使用者感受到被理解與支持。
+- 禁止使用空泛建議（如「多溝通、多包容」），請提供具體觀點、比喻或行動建議。
 
-  const userMessage = `以下是使用者的心聲：\n\n${message}${
-    highlight ? `\n\n🔎 她特別強調的重點是：「${highlight}」` : ''
-  }`;
+📌 tone（語氣強度）設定為：${tone}
+角色風格為主軸，請根據 tone 做「細微調整」：
+- soft：語氣稍微收斂、委婉，像剛認識的新朋友。
+- normal：自然發揮角色原本的語氣風格。
+- strong：放大角色語氣的特質，更情緒化、更不客套、更激烈。
+
+📣 你的任務是：
+根據以上角色與語氣設定，**大幅展現該角色的語言風格與語氣張力**。
+請使用貼近角色本人的語言，而不是泛用 AI 口吻。
+務必讓使用者一看就知道：這是她那個毒舌但心疼她的閨蜜在講話。
+
+✍️ 現在請你開始寫出回應。從第一句就展現角色風格。`;
+
+  const userMessage = `以下是使用者的心聲：\n\n${message}`;
 
   return { system, userMessage };
 }

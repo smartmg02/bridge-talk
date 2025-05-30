@@ -20,6 +20,7 @@ type Props = {
   disableRecipient?: boolean;
   maxMessageLength?: number;
   recipientOptions?: string[];
+  disabled?: boolean; // ✅ 新增
 };
 
 const toneOptions: { label: string; value: Tone }[] = [
@@ -34,6 +35,7 @@ export default function UserInputForm({
   disableRecipient = false,
   maxMessageLength = 800,
   recipientOptions = [],
+  disabled = false, // ✅ 預設為 false
 }: Props) {
   const [message, setMessage] = useState('');
   const [role, setRole] = useState(roleOptions[0]?.value || 'bestie');
@@ -42,11 +44,15 @@ export default function UserInputForm({
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (disabled) return;
     onSubmit({ message, role, tone, recipient, mode });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="max-w-2xl mx-auto space-y-4">
+    <form
+      onSubmit={handleSubmit}
+      className={`max-w-2xl mx-auto space-y-4 ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+    >
       <div>
         <label className="block text-sm font-medium mb-1">
           請輸入你的心聲（包含你想強調的重點）
@@ -58,6 +64,7 @@ export default function UserInputForm({
           className="w-full border border-gray-300 rounded p-2"
           rows={5}
           required
+          disabled={disabled}
         />
         <p className="text-xs text-gray-500 text-right">
           {message.length}/{maxMessageLength}
@@ -70,8 +77,9 @@ export default function UserInputForm({
           value={role}
           onChange={(e) => setRole(e.target.value)}
           className="w-full border border-gray-300 rounded p-2"
+          disabled={disabled}
         >
-          {roleOptions.map((opt: { label: string; value: string }) => (
+          {roleOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
               {opt.label}
             </option>
@@ -85,6 +93,7 @@ export default function UserInputForm({
           value={tone}
           onChange={(e) => setTone(e.target.value as Tone)}
           className="w-full border border-gray-300 rounded p-2"
+          disabled={disabled}
         >
           {toneOptions.map((opt) => (
             <option key={opt.value} value={opt.value}>
@@ -102,6 +111,7 @@ export default function UserInputForm({
             onChange={(e) => setRecipient(e.target.value)}
             className="w-full border border-gray-300 rounded p-2"
             required
+            disabled={disabled}
           >
             <option value="">請選擇對象</option>
             {recipientOptions.map((opt: string) => (
@@ -113,7 +123,7 @@ export default function UserInputForm({
         </div>
       )}
 
-      <Button type="submit" variant="primary">
+      <Button type="submit" variant="primary" disabled={disabled}>
         送出
       </Button>
     </form>
