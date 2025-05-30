@@ -1,3 +1,4 @@
+/** @type {import("eslint").Linter.Config} */
 module.exports = {
   env: {
     browser: true,
@@ -13,18 +14,19 @@ module.exports = {
     'prettier',
   ],
   rules: {
+    //#region 🔧 General Rules
     'no-unused-vars': 'off',
     'no-console': 'warn',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     'react/no-unescaped-entities': 'off',
-
     'react/display-name': 'off',
     'react/jsx-curly-brace-presence': [
       'warn',
       { props: 'never', children: 'never' },
     ],
+    //#endregion
 
-    //#region  //*=========== Unused Import ===========
+    //#region 🧹 Unused Imports
     '@typescript-eslint/no-unused-vars': 'off',
     'unused-imports/no-unused-imports': 'warn',
     'unused-imports/no-unused-vars': [
@@ -36,29 +38,21 @@ module.exports = {
         argsIgnorePattern: '^_',
       },
     ],
-    //#endregion  //*======== Unused Import ===========
+    //#endregion
 
-    //#region  //*=========== Import Sort ===========
+    //#region 📦 Import Sorting
     'simple-import-sort/exports': 'warn',
     'simple-import-sort/imports': [
       'warn',
       {
         groups: [
-          // ext library & side effect imports
-          ['^@?\\w', '^\\u0000'],
-          // {s}css files
-          ['^.+\\.s?css$'],
-          // Lib and hooks
+          ['^@?\\w', '^\\u0000'], // External packages & side effects
+          ['^.+\\.s?css$'], // Styles
           ['^@/lib', '^@/hooks'],
-          // static data
           ['^@/data'],
-          // components
           ['^@/components', '^@/container'],
-          // zustand store
           ['^@/store'],
-          // Other imports
           ['^@/'],
-          // relative paths up until 3 level
           [
             '^\\./?$',
             '^\\.(?!/?$)',
@@ -70,12 +64,11 @@ module.exports = {
             '^\\.\\./\\.\\./\\.\\.(?!/?$)',
           ],
           ['^@/types'],
-          // other that didnt fit in
-          ['^'],
+          ['^'], // Fallback
         ],
       },
     ],
-    //#endregion  //*======== Import Sort ===========
+    //#endregion
   },
   globals: {
     React: true,
