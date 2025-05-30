@@ -1,11 +1,8 @@
-//src/app/api/third-person-message/route.ts
-
 import { createServerClient } from '@supabase/ssr';
 import { cookies as nextCookies } from 'next/headers';
 import { NextRequest } from 'next/server';
 
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-
 import { buildProxyPrompt } from '@/utils/buildProxyPrompt';
 import { streamWithEarlyCutoff } from '@/utils/streamWithEarlyCutoff';
 
@@ -15,17 +12,21 @@ const noop = () => undefined;
 
 export async function POST(req: NextRequest) {
   const {
-    userInput,
+    message,
     tone = 'normal',
     recipient = '她的伴侶',
     role = 'bestie',
     highlight = '',
   } = await req.json();
 
+  const userInput = typeof message === 'string' ? message.trim() : '';
+
   const MAX_LENGTH = 1200;
   if (!userInput || userInput.length > MAX_LENGTH) {
     return new Response(
-      JSON.stringify({ error: `⚠️ 輸入內容過長（${userInput.length} 字），請壓縮至 ${MAX_LENGTH} 字以內。` }),
+      JSON.stringify({
+        error: `⚠️ 輸入內容過長（${userInput.length} 字），請壓縮至 ${MAX_LENGTH} 字以內。`,
+      }),
       { status: 400, headers: { 'Content-Type': 'application/json' } }
     );
   }
@@ -67,8 +68,8 @@ export async function POST(req: NextRequest) {
       userInput,
       role,
       tone,
-      highlight,
-      recipient,
+      highlight: typeof highlight === 'string' ? highlight : '',
+      recipient: typeof recipient === 'string' ? recipient : '',
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: '⚠️ 無效角色或 prompt 組裝失敗' }), {

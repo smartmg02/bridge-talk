@@ -4,33 +4,28 @@ import { NextRequest } from 'next/server';
 import { TextDecoder, TextEncoder } from 'util';
 
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
-
 import { buildReplyPrompt } from '@/utils/buildReplyPrompt';
 import { logWarn } from '@/utils/logger';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
-if (!OPENAI_API_KEY) {
-  throw new Error('❌ OPENAI_API_KEY is not set in .env.local');
-}
+if (!OPENAI_API_KEY) throw new Error('❌ OPENAI_API_KEY is not set in .env.local');
 
 const noop = () => undefined;
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const {
-    message,
-    tone = 'normal',
-    role = 'bestie',
-    highlight = '',
-  } = body;
+  const { message, tone = 'normal', role = 'bestie', highlight = '' } = await req.json();
 
-  if (!message || typeof message !== 'string') {
-    return new Response('⚠️ 沒有接收到有效內容', { status: 400 });
+  const userInput = typeof message === 'string' ? message.trim() : '';
+  const MAX_LENGTH = 1200;
+  if (!userInput || userInput.length > MAX_LENGTH) {
+    return new Response(
+      `⚠️ 輸入內容無效或過長（${userInput.length} 字），請壓縮至 ${MAX_LENGTH} 字內。`,
+      { status: 400 }
+    );
   }
 
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
   if (!supabaseUrl || !supabaseKey) {
     return new Response('❌ Supabase 環境變數未設定', { status: 500 });
   }
@@ -44,18 +39,18 @@ export async function POST(req: NextRequest) {
     },
   });
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user?.email) {
     return new Response('⚠️ 找不到登入使用者 email', { status: 401 });
   }
 
-  const userEmail = user.email;
-
   let system: string, userMessage: string;
   try {
     const prompt = buildReplyPrompt({
-      message,
-      highlight,
+      message: userInput,
+      highlight: typeof highlight === 'string' ? highlight : '',
       role,
       tone,
     });
@@ -90,7 +85,7 @@ export async function POST(req: NextRequest) {
       });
 
       if (!response.ok || !response.body) {
-        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: 'OpenAI request failed' })}\n\n`));
+        controller.enqueue(encoder.encode(`data: ${JSON.stringify({ error: '❌ OpenAI request failed' })}\n\n`));
         controller.close();
         return;
       }
@@ -98,11 +93,9 @@ export async function POST(req: NextRequest) {
       const reader = response.body.getReader();
       const decoder = new TextDecoder('utf-8');
       let buffer = '';
-      let doneReading = false;
 
-      while (!doneReading) {
+      while (true) {
         const { value, done } = await reader.read();
-        doneReading = done;
         if (done) break;
 
         buffer += decoder.decode(value, { stream: true });
@@ -121,8 +114,8 @@ export async function POST(req: NextRequest) {
             sentFinalOutput = true;
 
             await supabaseAdmin.from('records').insert({
-              user_email: userEmail,
-              message,
+              user_email: user.email,
+              message: userInput,
               gpt_reply: fullReply,
               mode: 'reply',
               tone,
