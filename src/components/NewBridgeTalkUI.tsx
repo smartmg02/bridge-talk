@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react';
 
-import { createClient } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-browser';
 
 import Button from '@/components/buttons/Button';
 
-import { roleOptions } from '@/constant/proxyRoleOptions';
+import { roleOptions } from '@/constant/roleOptions';
 
 type Record = {
   id: number;
@@ -55,40 +55,25 @@ export default function NewBridgeTalkUI({
     const today = new Date().toISOString().split('T')[0];
     const supabase = createClient();
 
-    // 最近紀錄
     supabase
       .from('records')
       .select('*')
       .eq('user_email', userEmail)
       .order('created_at', { ascending: false })
       .limit(3)
-      .then(({ data, error }) => {
-        if (!error && data) setRecords(data as Record[]);
+      .then(({ data }) => {
+        if (data) setRecords(data as Record[]);
       });
 
-    // 連線測試
-    supabase
-      .from('records')
-      .select('id')
-      .limit(1)
-      .then(({ data, error }) => {
-        if (error) {
-          console.error('❌ Supabase 錯誤:', error.message); // eslint-disable-line no-console
-        } else {
-          console.log('✅ Supabase 連線成功，資料範例:', data); // eslint-disable-line no-console
-        }
-      });
-
-    // token 用量查詢
     supabase
       .from('token_usage')
       .select('used_tokens')
       .eq('user_email', userEmail)
       .eq('date', today)
       .single()
-      .then(({ data, error }) => {
+      .then(({ data }) => {
         const usage = data as { used_tokens: number } | null;
-        if (!error && usage?.used_tokens != null) {
+        if (usage?.used_tokens != null) {
           setTokensUsed(usage.used_tokens);
         }
       });
@@ -113,7 +98,9 @@ export default function NewBridgeTalkUI({
 
         <section className="bg-blue-100 border-l-4 border-blue-500 p-4 text-sm text-gray-800 rounded-xl">
           <p className="mb-1 font-semibold">BridgeTalk 是一個幫助你「用第三人稱視角說出心聲」的 AI 工具。</p>
-          <p className="italic text-blue-700">範例：我雙手都提著東西，他竟然沒有幫我撐傘，我真的不是在意傘，而是在意他沒保護我。</p>
+          <p className="italic text-blue-700">
+            範例：我雙手都提著東西，他竟然沒有幫我撐傘，我真的不是在意傘，而是在意他沒保護我。
+          </p>
         </section>
 
         <section className="space-y-2">

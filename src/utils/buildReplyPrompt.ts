@@ -1,7 +1,7 @@
 import { rolePromptTemplates } from '@/constant/rolePromptTemplates';
 
 interface BuildReplyPromptOptions {
-  message: string;
+  message: string; // 已含 highlight 內容
   role?: keyof typeof rolePromptTemplates;
   tone?: 'soft' | 'normal' | 'strong';
   lang?: 'zh';
@@ -42,9 +42,9 @@ export function buildReplyPrompt({
 - strong：放大角色語氣的特質，更情緒化、更不客套、更激烈。
 
 📣 你的任務是：
-根據以上角色與語氣設定，**大幅展現該角色的語言風格與語氣張力**。
+根據以上角色與語氣設定，**展現該角色的語言風格與語氣張力，可以發揮創意產出相關內容，文長 200–250 字**。
 請使用貼近角色本人的語言，而不是泛用 AI 口吻。
-務必讓使用者一看就知道：這是她那個毒舌但心疼她的閨蜜在講話。
+務必讓使用者一看就知道：這是一個關心他的朋友在說話。
 
 ✍️ 現在請你開始寫出回應。從第一句就展現角色風格。`;
 

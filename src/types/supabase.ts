@@ -1,4 +1,10 @@
-export type Json = string | number | boolean | null | { [key: string]: Json } | Json[];
+export type Json =
+  | string
+  | number
+  | boolean
+  | null
+  | { [key: string]: Json }
+  | Json[];
 
 export interface Database {
   public: {
@@ -11,6 +17,10 @@ export interface Database {
           gpt_reply: string;
           audio_url: string | null;
           created_at: string;
+          mode: string;
+          role: string;
+          tone: string;
+          recipient: string;
         };
         Insert: {
           id?: number;
@@ -19,6 +29,10 @@ export interface Database {
           gpt_reply: string;
           audio_url?: string | null;
           created_at?: string;
+          mode: string;
+          role: string;
+          tone: string;
+          recipient: string;
         };
         Update: {
           id?: number;
@@ -27,6 +41,10 @@ export interface Database {
           gpt_reply?: string;
           audio_url?: string | null;
           created_at?: string;
+          mode?: string;
+          role?: string;
+          tone?: string;
+          recipient?: string;
         };
         Relationships: [];
       };

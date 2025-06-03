@@ -5,14 +5,12 @@ export function buildProxyPrompt({
   userInput,
   role,
   tone = 'normal',
-  highlight = '',
   recipient = '對方',
   lang = 'zh',
 }: {
   userInput: string;
   role: keyof typeof rolePromptTemplates;
   tone?: 'soft' | 'normal' | 'strong';
-  highlight?: string;
   recipient?: string;
   lang?: 'zh';
 }) {
@@ -22,16 +20,18 @@ export function buildProxyPrompt({
     throw new Error(`⚠️ 無效角色 "${role}" 或缺少 proxy 模式設定`);
   }
 
+  // 🔁 將 persona 與 styleTips 中的 ${recipient} 動態取代為實際對象
+  const persona = roleData.persona.replace(/\${recipient}/g, recipient);
+  const styleTips = roleData.styleTips.replace(/\${recipient}/g, recipient);
+
   const systemPrompt = formatProxySystemPrompt(
-    roleData.persona,
-    roleData.styleTips,
+    persona,
+    styleTips,
     recipient,
     tone
   );
 
-  const userMessage = `請根據以下事件描述，完成一封遵守上述規則的信件：\n\n${userInput}${
-    highlight ? `\n\n🔎 特別強調：「${highlight}」` : ''
-  }`;
+  const userMessage = `請根據以下事件描述，完成遵守上述規則，來幫使用者教訓對方。請直接針對「${recipient}」說話，禁止稱謂與署名。\n\n${userInput}`;
 
   return [
     { role: 'system', content: systemPrompt },

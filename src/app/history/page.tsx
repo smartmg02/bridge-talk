@@ -1,11 +1,9 @@
-//src/app/history/page.tsx
-
 'use client';
 
 import Link from 'next/link';
 import { useEffect, useState } from 'react';
 
-import { createClient } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-browser';
 
 import Button from '@/components/buttons/Button';
 import HistoryList from '@/components/HistoryList';

@@ -1,27 +1,28 @@
 {
-  "css.validate": false,
+  // ✅ 全域開啟格式化
   "editor.formatOnSave": true,
-  "editor.tabSize": 2,
   "editor.codeActionsOnSave": {
+    "source.fixAll": "explicit",
     "source.fixAll.eslint": "explicit"
   },
-  "[css]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
-  "[javascript]": {
-    "editor.defaultFormatter": "esbenp.prettier-vscode"
-  },
+
+  // ✅ TypeScript 使用 Prettier 作為格式化器
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode"
   },
-  "typescript.preferences.importModuleSpecifier": "non-relative",
-  "tailwindCSS.classAttributes": [
-    "class",
-    "className",
-    "classNames",
-    "containerClassName"
-  ],
-  "eslint.validate": ["javascript", "typescript", "typescriptreact"],
-  "eslint.alwaysShowStatus": true,
-  "npm.packageManager": "npm"
+
+  // ✅ 對特定檔案路徑關閉 formatOnSave（手動 override）
+  "editor.formatOnSaveMode": "file",
+  "editor.formatOnSaveTimeout": 750,
+
+  // ✅ 使用 vscode 設定的排除：此方式會讓 VS Code 自動跳過 formatOnSave
+  "editor.codeActionsOnSave": {
+    "source.fixAll": true,
+    "source.fixAll.eslint": true
+  },
+
+  // ✅ 覆寫特定檔案行為（需安裝 [Settings Profiles] 擴充或以手動方式處理）
+  "files.exclude": {
+    "**/src/app/api/third-person-reply/route.ts": false
+  }
 }

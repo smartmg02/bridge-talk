@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { createClient } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-browser';
 
 import Button from './buttons/Button';
 

@@ -4,7 +4,6 @@ import { NextRequest } from 'next/server';
 
 import { supabaseAdmin } from '@/lib/supabaseAdmin';
 import { buildProxyPrompt } from '@/utils/buildProxyPrompt';
-import { streamWithEarlyCutoff } from '@/utils/streamWithEarlyCutoff';
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY || '';
 const OPENAI_API_URL = 'https://api.openai.com/v1/chat/completions';
@@ -14,9 +13,8 @@ export async function POST(req: NextRequest) {
   const {
     message,
     tone = 'normal',
-    recipient = '她的伴侶',
+    recipient = '',
     role = 'bestie',
-    highlight = '',
   } = await req.json();
 
   const userInput = typeof message === 'string' ? message.trim() : '';
@@ -53,6 +51,7 @@ export async function POST(req: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
   if (!user?.email) {
     return new Response(JSON.stringify({ error: '⚠️ 找不到登入使用者 email' }), {
       status: 401,
@@ -68,7 +67,6 @@ export async function POST(req: NextRequest) {
       userInput,
       role,
       tone,
-      highlight: typeof highlight === 'string' ? highlight : '',
       recipient: typeof recipient === 'string' ? recipient : '',
     });
   } catch (err) {
@@ -86,49 +84,35 @@ export async function POST(req: NextRequest) {
     },
     body: JSON.stringify({
       model: 'gpt-3.5-turbo',
-      stream: true,
+      stream: false,
       temperature: tone === 'strong' ? 1 : tone === 'soft' ? 0.3 : 0.7,
       max_tokens: 500,
       messages,
     }),
   });
 
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      await streamWithEarlyCutoff({
-        response: openAIRes,
-        onDelta: (chunk) => {
-          controller.enqueue(
-            encoder.encode(
-              `data: ${JSON.stringify({ choices: [{ delta: { content: chunk } }] })}\n\n`
-            )
-          );
-        },
-        onDone: async (finalText) => {
-          controller.enqueue(encoder.encode(`data: [DONE]\n\n`));
-          controller.close();
+  const result = await openAIRes.json();
+  const fullText = result.choices?.[0]?.message?.content?.trim();
 
-          await supabaseAdmin.from('records').insert({
-            user_email: userEmail,
-            message: userInput,
-            gpt_reply: finalText,
-            mode: 'proxy',
-            tone,
-            recipient,
-            role,
-            highlight,
-          });
-        },
-      });
-    },
+  if (!fullText) {
+    return new Response(JSON.stringify({ error: '⚠️ OpenAI 回傳空內容' }), {
+      status: 500,
+      headers: { 'Content-Type': 'application/json' },
+    });
+  }
+
+  await supabaseAdmin.from('records').insert({
+    user_email: userEmail,
+    message: userInput,
+    gpt_reply: fullText,
+    mode: 'proxy',
+    tone,
+    recipient,
+    role,
   });
 
-  return new Response(stream, {
-    headers: {
-      'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
-      Connection: 'keep-alive',
-    },
+  return new Response(JSON.stringify({ reply: fullText }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
   });
 }

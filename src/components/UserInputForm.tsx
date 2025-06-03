@@ -8,6 +8,11 @@ import { roleOptions } from '@/constant/roleOptions';
 
 type Tone = 'soft' | 'normal' | 'strong';
 
+type RecipientOption = {
+  label: string;
+  value: string;
+};
+
 type Props = {
   onSubmit: (data: {
     message: string;
@@ -19,8 +24,8 @@ type Props = {
   mode: 'reply' | 'proxy';
   disableRecipient?: boolean;
   maxMessageLength?: number;
-  recipientOptions?: string[];
-  disabled?: boolean; // ✅ 新增
+  recipientOptions?: RecipientOption[];
+  disabled?: boolean;
 };
 
 const toneOptions: { label: string; value: Tone }[] = [
@@ -35,7 +40,7 @@ export default function UserInputForm({
   disableRecipient = false,
   maxMessageLength = 800,
   recipientOptions = [],
-  disabled = false, // ✅ 預設為 false
+  disabled = false,
 }: Props) {
   const [message, setMessage] = useState('');
   const [role, setRole] = useState(roleOptions[0]?.value || 'bestie');
@@ -63,6 +68,7 @@ export default function UserInputForm({
           maxLength={maxMessageLength}
           className="w-full border border-gray-300 rounded p-2"
           rows={5}
+          placeholder="請描述你內心的話，例如：那天他讓我全身淋濕..."
           required
           disabled={disabled}
         />
@@ -114,9 +120,9 @@ export default function UserInputForm({
             disabled={disabled}
           >
             <option value="">請選擇對象</option>
-            {recipientOptions.map((opt: string) => (
-              <option key={opt} value={opt}>
-                {opt}
+            {recipientOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
               </option>
             ))}
           </select>

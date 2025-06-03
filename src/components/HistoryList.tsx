@@ -4,7 +4,7 @@ import clsx from 'clsx';
 import { useEffect, useState } from 'react';
 
 import { logError } from '@/lib/logger';
-import { createClient } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-browser';
 
 type Record = {
   id: number;

@@ -3,7 +3,7 @@
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
-import { createClient } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-browser';
 
 import AuthStatus from '@/components/AuthStatus';
 import Button from '@/components/buttons/Button';
@@ -18,7 +18,14 @@ export default function HomePage() {
   const router = useRouter();
   const supabase = createClient();
 
-  const recipientOptions = ['老公', '老婆', '主管', '同事', '朋友', '父親', '母親'];
+  // ✅ 改為 label + value 結構
+  const recipientOptions = [
+    { label: '我老公', value: '使用者的配偶（老公）' },
+    { label: '我老婆', value: '使用者的配偶（老婆）' },
+    { label: '我主管', value: '使用者的主管' },
+    { label: '我同事', value: '使用者的同事' },
+    { label: '我朋友', value: '使用者的朋友' },
+  ];
 
   useEffect(() => {
     const fetchUserEmail = async () => {
@@ -47,7 +54,6 @@ export default function HomePage() {
   }) => {
     if (!userEmail) return;
 
-    // Step 1: Debug log - 檢查送出內容
     console.log('[前端送出]', {
       message,
       role,

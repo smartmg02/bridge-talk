@@ -21,9 +21,12 @@
     "@supabase/auth-helpers-react": "^0.5.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.49.8",
+    "ai": "^4.3.16",
     "clsx": "^2.1.1",
     "lucide-react": "^0.438.0",
     "next": "^14.2.23",
+    "node-opencc": "^2.0.1",
+    "openai": "^5.0.1",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-icons": "^5.4.0",
@@ -59,14 +62,5 @@
     "prettier-plugin-tailwindcss": "^0.2.8",
     "tailwindcss": "^3.4.17",
     "typescript": "^4.9.5"
-  },
-  "lint-staged": {
-    "**/*.{js,jsx,ts,tsx}": [
-      "eslint --max-warnings=0",
-      "prettier -w"
-    ],
-    "**/*.{json,css,scss,md,webmanifest}": [
-      "prettier -w"
-    ]
   }
 }

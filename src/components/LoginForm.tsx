@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { createClient } from '@/lib/supabase';
+import { createClient } from '@/lib/supabase-browser';
 
 import Button from '@/components/buttons/Button';
 import { Input } from '@/components/forms/Input';
