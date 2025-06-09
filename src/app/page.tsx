@@ -10,6 +10,8 @@ import Button from '@/components/buttons/Button';
 import HistoryList from '@/components/HistoryList';
 import UserInputForm from '@/components/UserInputForm';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
+
 export default function HomePage() {
   const [reply, setReply] = useState('');
   const [mode, setMode] = useState<'proxy' | 'reply'>('reply');
@@ -41,7 +43,7 @@ export default function HomePage() {
   }, [supabase.auth]);
 
   const fetchRemainingToken = async (email: string) => {
-    const res = await fetch(`/api/token-remaining?email=${encodeURIComponent(email)}`);
+    const res = await fetch(`${API_BASE}/api/token-remaining?email=${encodeURIComponent(email)}`);
     const data = await res.json();
     if (res.ok) {
       setRemainingToken(data.remaining);
@@ -68,7 +70,7 @@ export default function HomePage() {
     setLoading(true);
     setReply('AI 回應產出中...');
 
-    const res = await fetch(`/api/third-person-${submitMode === 'proxy' ? 'message' : 'reply'}`, {
+    const res = await fetch(`${API_BASE}/api/third-person-${submitMode === 'proxy' ? 'message' : 'reply'}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ message, tone, role, recipient, email: userEmail }),

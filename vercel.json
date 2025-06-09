@@ -9,5 +9,11 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://bridge-talk-api.onrender.com/api/:path*"
+    }
   ]
 }

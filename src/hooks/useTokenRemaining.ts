@@ -1,5 +1,6 @@
-// src/hooks/useTokenRemaining.ts
-import { useCallback,useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
 export function useTokenRemaining() {
   const [remaining, setRemaining] = useState<number | null>(null);
@@ -8,7 +9,7 @@ export function useTokenRemaining() {
 
   const fetchRemaining = useCallback(async () => {
     try {
-      const res = await fetch('/api/token-remaining');
+      const res = await fetch(`${API_BASE}/api/token-remaining`);
       if (!res.ok) throw new Error('Token 查詢失敗');
       const data = await res.json();
       setRemaining(data.remaining);
