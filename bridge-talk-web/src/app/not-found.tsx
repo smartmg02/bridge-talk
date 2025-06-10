@@ -8,6 +8,9 @@ import { RiAlarmWarningFill } from 'react-icons/ri';
 export default function NotFoundPage() {
   const router = useRouter();
 
+  // Workaround：轉型為 any 解決 JSX 認不得的問題
+  const AlarmIcon = RiAlarmWarningFill as any;
+
   useEffect(() => {
     const timeout = setTimeout(() => {
       router.replace('/');
@@ -18,7 +21,7 @@ export default function NotFoundPage() {
   return (
     <section className="bg-white">
       <div className="layout flex min-h-screen flex-col items-center justify-center text-center text-black">
-        <RiAlarmWarningFill
+        <AlarmIcon
           size={60}
           className="drop-shadow-glow animate-flicker text-red-500"
         />
