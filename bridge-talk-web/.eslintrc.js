@@ -8,19 +8,14 @@ module.exports = {
   plugins: ['@typescript-eslint', 'simple-import-sort', 'unused-imports'],
   extends: ['eslint:recommended', 'next', 'next/core-web-vitals', 'prettier'],
   rules: {
-    //#region 🔧 General Rules
     'no-unused-vars': 'off',
     'no-console': 'warn',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     'react/no-unescaped-entities': 'off',
     'react/display-name': 'off',
-    'react/jsx-curly-brace-presence': [
-      'warn',
-      { props: 'never', children: 'never' },
-    ],
-    //#endregion
+    'react/jsx-curly-brace-presence': ['warn', { props: 'never', children: 'never' }],
 
-    //#region 🧹 Unused Imports
+    // 🧹 Unused Imports
     '@typescript-eslint/no-unused-vars': 'warn',
     'unused-imports/no-unused-imports': 'warn',
     'unused-imports/no-unused-vars': [
@@ -32,9 +27,8 @@ module.exports = {
         argsIgnorePattern: '^_',
       },
     ],
-    //#endregion
 
-    //#region 📦 Import Sorting
+    // 📦 Import Sorting
     'simple-import-sort/exports': 'warn',
     'simple-import-sort/imports': [
       'warn',
@@ -62,7 +56,6 @@ module.exports = {
         ],
       },
     ],
-    //#endregion
   },
   globals: {
     React: true,
