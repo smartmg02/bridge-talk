@@ -1,4 +1,5 @@
-// src/components/buttons/Button.tsx
+'use client';
+
 import { LucideIcon } from 'lucide-react';
 import * as React from 'react';
 import { IconType } from 'react-icons';
@@ -21,6 +22,8 @@ type ButtonProps = {
     rightIcon?: string;
   };
 } & React.ComponentPropsWithRef<'button'>;
+
+const Spinner = ImSpinner2 as any;
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   (
@@ -108,7 +111,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
               }
             )}
           >
-            <ImSpinner2 className='animate-spin' />
+            <Spinner className='animate-spin' />
           </div>
         )}
         {RenderLeftIcon && (
