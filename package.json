@@ -15,7 +15,7 @@
     "format": "prettier -w .",
     "format:check": "prettier -c .",
     "postbuild": "next-sitemap --config next-sitemap.config.js",
-    "prepare": "husky install"
+    "prepare": "if [ -d .git ]; then husky install; fi"
   },
   "dependencies": {
     "@supabase/auth-helpers-react": "^0.5.0",
