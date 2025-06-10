@@ -2,11 +2,9 @@
 import { LucideIcon } from 'lucide-react';
 import * as React from 'react';
 import { IconType } from 'react-icons';
-import { ImSpinner2 as RawSpinner } from 'react-icons/im';
+import { ImSpinner2 } from 'react-icons/im';
 
 import { cn } from '@/lib/utils';
-
-const Spinner = RawSpinner as React.ElementType;
 
 const ButtonVariant = ['primary', 'outline', 'ghost', 'light', 'dark'] as const;
 const ButtonSize = ['sm', 'base'] as const;
@@ -43,6 +41,9 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ) => {
     const disabled = isLoading || buttonDisabled;
 
+    const RenderLeftIcon = LeftIcon as React.ElementType | undefined;
+    const RenderRightIcon = RightIcon as React.ElementType | undefined;
+
     return (
       <button
         ref={ref}
@@ -53,13 +54,10 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           'focus-visible:ring-primary-500 focus:outline-none focus-visible:ring',
           'shadow-sm',
           'transition-colors duration-75',
-          //#region  //*=========== Size ===========
           [
             size === 'base' && ['px-3 py-1.5', 'text-sm md:text-base'],
             size === 'sm' && ['px-2 py-1', 'text-xs md:text-sm'],
           ],
-          //#endregion
-          //#region  //*=========== Variants ===========
           [
             variant === 'primary' && [
               'bg-primary-500 text-white',
@@ -72,15 +70,13 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
               'text-primary-500',
               'border-primary-500 border',
               'hover:bg-primary-50 active:bg-primary-100 disabled:bg-primary-100',
-              isDarkBg &&
-                'hover:bg-gray-900 active:bg-gray-800 disabled:bg-gray-800',
+              isDarkBg && 'hover:bg-gray-900 active:bg-gray-800 disabled:bg-gray-800',
             ],
             variant === 'ghost' && [
               'text-primary-500',
               'shadow-none',
               'hover:bg-primary-50 active:bg-primary-100 disabled:bg-primary-100',
-              isDarkBg &&
-                'hover:bg-gray-900 active:bg-gray-800 disabled:bg-gray-800',
+              isDarkBg && 'hover:bg-gray-900 active:bg-gray-800 disabled:bg-gray-800',
             ],
             variant === 'light' && [
               'bg-white text-gray-700',
@@ -94,7 +90,6 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
               'hover:bg-gray-800 active:bg-gray-700 disabled:bg-gray-700',
             ],
           ],
-          //#endregion
           'disabled:cursor-not-allowed',
           isLoading &&
             'relative text-transparent transition-none hover:text-transparent disabled:cursor-wait',
@@ -113,17 +108,14 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
               }
             )}
           >
-            <Spinner className='animate-spin' />
+            <ImSpinner2 className='animate-spin' />
           </div>
         )}
-        {LeftIcon && (
+        {RenderLeftIcon && (
           <div
-            className={cn([
-              size === 'base' && 'mr-1',
-              size === 'sm' && 'mr-1.5',
-            ])}
+            className={cn([size === 'base' && 'mr-1', size === 'sm' && 'mr-1.5'])}
           >
-            <LeftIcon
+            <RenderLeftIcon
               size='1em'
               className={cn(
                 [
@@ -136,14 +128,11 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
           </div>
         )}
         {children}
-        {RightIcon && (
+        {RenderRightIcon && (
           <div
-            className={cn([
-              size === 'base' && 'ml-1',
-              size === 'sm' && 'ml-1.5',
-            ])}
+            className={cn([size === 'base' && 'ml-1', size === 'sm' && 'ml-1.5'])}
           >
-            <RightIcon
+            <RenderRightIcon
               size='1em'
               className={cn(
                 [
@@ -160,4 +149,5 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   }
 );
 
+Button.displayName = 'Button';
 export default Button;

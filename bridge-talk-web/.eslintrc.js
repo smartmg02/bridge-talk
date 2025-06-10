@@ -5,7 +5,7 @@ module.exports = {
     es2021: true,
     node: true,
   },
-  plugins: ['@typescript-eslint', 'simple-import-sort', 'unused-imports'],
+  plugins: ['@typescript-eslint', 'simple-import-sort'],
   extends: ['eslint:recommended', 'next', 'next/core-web-vitals', 'prettier'],
   rules: {
     //#region 🔧 General Rules
@@ -22,16 +22,6 @@ module.exports = {
 
     //#region 🧹 Unused Imports
     '@typescript-eslint/no-unused-vars': 'warn',
-    'unused-imports/no-unused-imports': 'warn',
-    'unused-imports/no-unused-vars': [
-      'warn',
-      {
-        vars: 'all',
-        varsIgnorePattern: '^_',
-        args: 'after-used',
-        argsIgnorePattern: '^_',
-      },
-    ],
     //#endregion
 
     //#region 📦 Import Sorting
@@ -64,6 +54,14 @@ module.exports = {
     ],
     //#endregion
   },
+  overrides: [
+    {
+      files: ['**/__tests__/**/*.[jt]s?(x)', '**/?(*.)+(spec|test).[jt]s?(x)'],
+      env: {
+        jest: true,
+      },
+    },
+  ],
   globals: {
     React: true,
     JSX: true,

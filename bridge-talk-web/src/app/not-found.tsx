@@ -1,26 +1,30 @@
-import { Metadata } from 'next';
+'use client';
+
+import { useRouter } from 'next/navigation';
 import * as React from 'react';
+import { useEffect } from 'react';
 import { RiAlarmWarningFill } from 'react-icons/ri';
 
-export const metadata: Metadata = {
-  title: 'Not Found',
-};
+export default function NotFoundPage() {
+  const router = useRouter();
 
-export default function NotFound() {
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      router.replace('/');
+    }, 3000);
+    return () => clearTimeout(timeout);
+  }, [router]);
+
   return (
-    <main>
-      <section className='bg-white'>
-        <div className='layout flex min-h-screen flex-col items-center justify-center text-center text-black'>
-          {React.createElement(RiAlarmWarningFill as React.ElementType, {
-            size: 60,
-            className: 'drop-shadow-glow animate-flicker text-red-500',
-          })}
-          <h1 className='mt-8 text-4xl md:text-6xl'>Page Not Found</h1>
-          <a href='/' className='mt-4 text-blue-600 hover:underline'>
-            Back to home
-          </a>
-        </div>
-      </section>
-    </main>
+    <section className="bg-white">
+      <div className="layout flex min-h-screen flex-col items-center justify-center text-center text-black">
+        <RiAlarmWarningFill
+          size={60}
+          className="drop-shadow-glow animate-flicker text-red-500"
+        />
+        <h1 className="mt-8 text-4xl md:text-6xl">頁面找不到</h1>
+        <p className="mt-4 text-lg text-gray-700">3 秒後將自動導回首頁</p>
+      </div>
+    </section>
   );
 }

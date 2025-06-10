@@ -21,10 +21,15 @@
 @layer base {
   html,
   body {
-    @apply font-sans text-black bg-white;
+    @apply bg-white font-sans text-black;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-semibold;
   }
 }
