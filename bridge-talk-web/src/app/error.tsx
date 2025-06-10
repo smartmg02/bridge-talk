@@ -5,6 +5,9 @@ import { RiAlarmWarningFill } from 'react-icons/ri';
 
 import TextButton from '@/components/buttons/TextButton';
 
+// 🔧 顯式轉型解決 JSX 錯誤
+const AlarmIcon = RiAlarmWarningFill as unknown as React.FC<React.SVGProps<SVGSVGElement>>;
+
 export default function Error({
   error,
   reset,
@@ -21,7 +24,7 @@ export default function Error({
     <main>
       <section className='bg-white'>
         <div className='layout flex min-h-screen flex-col items-center justify-center text-center text-black'>
-          <RiAlarmWarningFill
+          <AlarmIcon
             size={60}
             className='drop-shadow-glow animate-flicker text-red-500'
           />
