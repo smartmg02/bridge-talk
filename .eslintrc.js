@@ -8,14 +8,19 @@ module.exports = {
   plugins: ['@typescript-eslint', 'simple-import-sort', 'unused-imports'],
   extends: ['eslint:recommended', 'next', 'next/core-web-vitals', 'prettier'],
   rules: {
+    //#region 🔧 General Rules
     'no-unused-vars': 'off',
     'no-console': 'warn',
     '@typescript-eslint/explicit-module-boundary-types': 'off',
     'react/no-unescaped-entities': 'off',
     'react/display-name': 'off',
-    'react/jsx-curly-brace-presence': ['warn', { props: 'never', children: 'never' }],
+    'react/jsx-curly-brace-presence': [
+      'warn',
+      { props: 'never', children: 'never' },
+    ],
+    //#endregion
 
-    // 🧹 Unused Imports
+    //#region 🧹 Unused Imports
     '@typescript-eslint/no-unused-vars': 'warn',
     'unused-imports/no-unused-imports': 'warn',
     'unused-imports/no-unused-vars': [
@@ -27,15 +32,16 @@ module.exports = {
         argsIgnorePattern: '^_',
       },
     ],
+    //#endregion
 
-    // 📦 Import Sorting
+    //#region 📦 Import Sorting
     'simple-import-sort/exports': 'warn',
     'simple-import-sort/imports': [
       'warn',
       {
         groups: [
-          ['^@?\\w', '^\\u0000'], // External packages & side effects
-          ['^.+\\.s?css$'], // Styles
+          ['^@?\\w', '^\\u0000'],
+          ['^.+\\.s?css$'],
           ['^@/lib', '^@/hooks'],
           ['^@/data'],
           ['^@/components', '^@/container'],
@@ -52,10 +58,11 @@ module.exports = {
             '^\\.\\./\\.\\./\\.\\.(?!/?$)',
           ],
           ['^@/types'],
-          ['^'], // Fallback
+          ['^'],
         ],
       },
     ],
+    //#endregion
   },
   globals: {
     React: true,
