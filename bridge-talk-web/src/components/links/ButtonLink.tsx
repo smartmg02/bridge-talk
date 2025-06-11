@@ -53,13 +53,12 @@ const ButtonLink = React.forwardRef<HTMLAnchorElement, ButtonLinkProps>(
           'focus-visible:ring-primary-500 focus:outline-none focus-visible:ring',
           'shadow-sm',
           'transition-colors duration-75',
-          //#region  //*=========== Size ===========
+          // Size
           [
             size === 'base' && ['px-3 py-1.5', 'text-sm md:text-base'],
             size === 'sm' && ['px-2 py-1', 'text-xs md:text-sm'],
           ],
-          //#endregion  //*======== Size ===========
-          //#region  //*=========== Variants ===========
+          // Variant
           [
             variant === 'primary' && [
               'bg-primary-500 text-white',
@@ -94,7 +93,6 @@ const ButtonLink = React.forwardRef<HTMLAnchorElement, ButtonLinkProps>(
               'hover:bg-gray-800 active:bg-gray-700 disabled:bg-gray-700',
             ],
           ],
-          //#endregion  //*======== Variants ===========
           'disabled:cursor-not-allowed',
           className
         )}
@@ -106,16 +104,16 @@ const ButtonLink = React.forwardRef<HTMLAnchorElement, ButtonLinkProps>(
               size === 'sm' && 'mr-1.5',
             ])}
           >
-            <LeftIcon
-              size='1em'
-              className={cn(
+            {React.createElement(LeftIcon as React.ElementType, {
+              size: '1em',
+              className: cn(
                 [
                   size === 'base' && 'md:text-md text-md',
                   size === 'sm' && 'md:text-md text-sm',
                 ],
                 classNames?.leftIcon
-              )}
-            />
+              ),
+            })}
           </div>
         )}
         {children}
@@ -126,21 +124,23 @@ const ButtonLink = React.forwardRef<HTMLAnchorElement, ButtonLinkProps>(
               size === 'sm' && 'ml-1.5',
             ])}
           >
-            <RightIcon
-              size='1em'
-              className={cn(
+            {React.createElement(RightIcon as React.ElementType, {
+              size: '1em',
+              className: cn(
                 [
                   size === 'base' && 'text-md md:text-md',
                   size === 'sm' && 'md:text-md text-sm',
                 ],
                 classNames?.rightIcon
-              )}
-            />
+              ),
+            })}
           </div>
         )}
       </UnstyledLink>
     );
   }
 );
+
+ButtonLink.displayName = 'ButtonLink';
 
 export default ButtonLink;
