@@ -109,7 +109,11 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
             })}
           </div>
         )}
-        {Icon && <Icon size='1em' className={cn(classNames?.icon)} />}
+        {Icon &&
+          React.createElement(Icon as React.ElementType, {
+            size: '1em',
+            className: cn(classNames?.icon),
+          })}
       </button>
     );
   }
