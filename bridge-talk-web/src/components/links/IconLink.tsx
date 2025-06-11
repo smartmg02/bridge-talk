@@ -1,6 +1,6 @@
 import * as React from 'react';
 import { IconType } from 'react-icons';
-import { LucideIcon, LucideProps } from 'lucide-react';
+import { LucideIcon } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import UnstyledLink, {
@@ -24,19 +24,11 @@ type IconLinkProps = {
   };
 } & Omit<UnstyledLinkProps, 'children'>;
 
-function isLucideIcon(icon: any): icon is LucideIcon {
-  return typeof icon === 'function' && 'displayName' in icon && icon.displayName?.startsWith('Lucide');
-}
-
-function isReactIcon(icon: any): icon is IconType {
-  return typeof icon === 'function';
-}
-
 const IconLink = React.forwardRef<HTMLAnchorElement, IconLinkProps>(
   (
     {
       className,
-      icon,
+      icon: IconComponent,
       variant = 'outline',
       isDarkBg = false,
       classNames,
@@ -44,22 +36,6 @@ const IconLink = React.forwardRef<HTMLAnchorElement, IconLinkProps>(
     },
     ref
   ) => {
-    let iconElement: React.ReactNode = null;
-
-    if (icon) {
-      if (isLucideIcon(icon)) {
-        iconElement = React.createElement(icon as LucideIcon, {
-          size: 16,
-          className: cn(classNames?.icon),
-        } satisfies Partial<LucideProps>);
-      } else if (isReactIcon(icon)) {
-        iconElement = React.createElement(icon as IconType, {
-          size: 16,
-          className: cn(classNames?.icon),
-        });
-      }
-    }
-
     return (
       <UnstyledLink
         ref={ref}
@@ -101,7 +77,9 @@ const IconLink = React.forwardRef<HTMLAnchorElement, IconLinkProps>(
         )}
         {...rest}
       >
-        {iconElement}
+        {IconComponent && (
+          <IconComponent size={16} className={cn(classNames?.icon)} />
+        )}
       </UnstyledLink>
     );
   }
