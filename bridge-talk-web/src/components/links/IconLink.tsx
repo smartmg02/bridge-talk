@@ -1,9 +1,8 @@
-import { LucideIcon } from 'lucide-react';
 import * as React from 'react';
 import { IconType } from 'react-icons';
+import { LucideIcon, LucideProps } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
-
 import UnstyledLink, {
   UnstyledLinkProps,
 } from '@/components/links/UnstyledLink';
@@ -25,6 +24,14 @@ type IconLinkProps = {
   };
 } & Omit<UnstyledLinkProps, 'children'>;
 
+function isLucideIcon(icon: any): icon is LucideIcon {
+  return typeof icon === 'function' && 'displayName' in icon && icon.displayName?.startsWith('Lucide');
+}
+
+function isReactIcon(icon: any): icon is IconType {
+  return typeof icon === 'function';
+}
+
 const IconLink = React.forwardRef<HTMLAnchorElement, IconLinkProps>(
   (
     {
@@ -37,13 +44,21 @@ const IconLink = React.forwardRef<HTMLAnchorElement, IconLinkProps>(
     },
     ref
   ) => {
-    const iconElement =
-      typeof icon === 'function'
-        ? React.createElement(icon, {
-            size: '1em',
-            className: cn(classNames?.icon),
-          })
-        : null;
+    let iconElement: React.ReactNode = null;
+
+    if (icon) {
+      if (isLucideIcon(icon)) {
+        iconElement = React.createElement(icon as LucideIcon, {
+          size: 16,
+          className: cn(classNames?.icon),
+        } satisfies Partial<LucideProps>);
+      } else if (isReactIcon(icon)) {
+        iconElement = React.createElement(icon as IconType, {
+          size: 16,
+          className: cn(classNames?.icon),
+        });
+      }
+    }
 
     return (
       <UnstyledLink
@@ -52,41 +67,31 @@ const IconLink = React.forwardRef<HTMLAnchorElement, IconLinkProps>(
         className={cn(
           'inline-flex items-center justify-center rounded font-medium',
           'focus-visible:ring-primary-500 focus:outline-none focus-visible:ring',
-          'shadow-sm',
-          'transition-colors duration-75',
+          'shadow-sm transition-colors duration-75',
           'min-h-[28px] min-w-[28px] p-1 md:min-h-[34px] md:min-w-[34px] md:p-2',
-          //#region  //*=========== Variants ===========
+          //#region Variant
           [
             variant === 'primary' && [
               'bg-primary-500 text-white',
               'border-primary-600 border',
-              'hover:bg-primary-600 hover:text-white',
-              'active:bg-primary-700',
-              'disabled:bg-primary-700',
+              'hover:bg-primary-600 active:bg-primary-700 disabled:bg-primary-700',
             ],
             variant === 'outline' && [
-              'text-primary-500',
-              'border-primary-500 border',
+              'text-primary-500 border border-primary-500',
               'hover:bg-primary-50 active:bg-primary-100 disabled:bg-primary-100',
-              isDarkBg &&
-                'hover:bg-gray-900 active:bg-gray-800 disabled:bg-gray-800',
+              isDarkBg && 'hover:bg-gray-900 active:bg-gray-800 disabled:bg-gray-800',
             ],
             variant === 'ghost' && [
-              'text-primary-500',
-              'shadow-none',
+              'text-primary-500 shadow-none',
               'hover:bg-primary-50 active:bg-primary-100 disabled:bg-primary-100',
-              isDarkBg &&
-                'hover:bg-gray-900 active:bg-gray-800 disabled:bg-gray-800',
+              isDarkBg && 'hover:bg-gray-900 active:bg-gray-800 disabled:bg-gray-800',
             ],
             variant === 'light' && [
-              'bg-white text-gray-700',
-              'border border-gray-300',
-              'hover:text-dark hover:bg-gray-100',
-              'active:bg-white/80 disabled:bg-gray-200',
+              'bg-white text-gray-700 border border-gray-300',
+              'hover:bg-gray-100 active:bg-white/80 disabled:bg-gray-200',
             ],
             variant === 'dark' && [
-              'bg-gray-900 text-white',
-              'border border-gray-600',
+              'bg-gray-900 text-white border border-gray-600',
               'hover:bg-gray-800 active:bg-gray-700 disabled:bg-gray-700',
             ],
           ],
