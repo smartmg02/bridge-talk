@@ -29,7 +29,7 @@ const IconLink = React.forwardRef<HTMLAnchorElement, IconLinkProps>(
   (
     {
       className,
-      icon: Icon,
+      icon,
       variant = 'outline',
       isDarkBg = false,
       classNames,
@@ -37,6 +37,14 @@ const IconLink = React.forwardRef<HTMLAnchorElement, IconLinkProps>(
     },
     ref
   ) => {
+    const iconElement =
+      typeof icon === 'function'
+        ? React.createElement(icon, {
+            size: '1em',
+            className: cn(classNames?.icon),
+          })
+        : null;
+
     return (
       <UnstyledLink
         ref={ref}
@@ -82,15 +90,13 @@ const IconLink = React.forwardRef<HTMLAnchorElement, IconLinkProps>(
               'hover:bg-gray-800 active:bg-gray-700 disabled:bg-gray-700',
             ],
           ],
-          //#endregion  //*======== Variants ===========
+          //#endregion
           'disabled:cursor-not-allowed',
           className
         )}
         {...rest}
       >
-        {typeof Icon === 'function' ? (
-          <Icon size='1em' className={cn(classNames?.icon)} />
-        ) : null}
+        {iconElement}
       </UnstyledLink>
     );
   }
