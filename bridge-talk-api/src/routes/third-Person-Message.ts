@@ -49,6 +49,13 @@ export const thirdPersonMessage = async (
     }),
   });
 
+  if (!openAIRes.ok) {
+    const errorText = await openAIRes.text();
+    console.error('OpenAI 回傳錯誤：', errorText);
+    res.status(500).json({ error: `⚠️ OpenAI API 請求失敗（狀態碼 ${openAIRes.status}）` });
+    return;
+  }
+
   const result = await openAIRes.json();
   const fullText = result.choices?.[0]?.message?.content?.trim();
   const tokenCount = result.usage?.total_tokens ?? 0;
