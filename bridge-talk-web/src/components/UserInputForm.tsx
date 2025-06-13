@@ -69,7 +69,7 @@ export default function UserInputForm({
           maxLength={maxMessageLength}
           className="w-full border border-gray-300 rounded p-2"
           rows={5}
-          placeholder="請描述你內心的話，例如：那天他讓我全身淋濕..."
+          placeholder="請描述你內心的話，例如：我生日那天，我老公整天都沒說一句話，連一封簡訊都沒有..."
           required
           disabled={disabled}
         />

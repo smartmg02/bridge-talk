@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useRef,useState } from 'react';
 
 import { createClient } from '@/lib/supabase-browser';
 
@@ -10,12 +10,20 @@ import UserInputForm from '@/components/UserInputForm';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
+// ✅ 擴充 window.adsbygoogle 類型
+declare global {
+  interface Window {
+    adsbygoogle?: unknown[];
+  }
+}
+
 export default function HomePage() {
   const [reply, setReply] = useState('');
   const [mode, setMode] = useState<'proxy' | 'reply'>('reply');
   const [userEmail, setUserEmail] = useState('');
   const [remainingToken, setRemainingToken] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
+  const adRef = useRef<HTMLDivElement | null>(null);
   const supabase = createClient();
 
   const recipientOptions = [
@@ -38,6 +46,40 @@ export default function HomePage() {
     };
     fetchUserEmail();
   }, [supabase.auth]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || process.env.NODE_ENV !== 'production') return;
+
+    const observer = new IntersectionObserver(
+      entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting && adRef.current) {
+            adRef.current.innerHTML = `
+              <ins class="adsbygoogle"
+                   style="display:block"
+                   data-ad-client="ca-pub-4437355355807949"
+                   data-ad-slot="4058285574"
+                   data-ad-format="auto"
+                   data-full-width-responsive="true"></ins>
+            `;
+            try {
+              (window.adsbygoogle = window.adsbygoogle || []).push({});
+            } catch {
+              // 廣告載入失敗，靜默處理
+            }
+            observer.unobserve(entry.target);
+          }
+        });
+      },
+      { rootMargin: '0px 0px 200px 0px' }
+    );
+
+    if (adRef.current) {
+      observer.observe(adRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, []);
 
   const fetchRemainingToken = async (email: string) => {
     const res = await fetch(`${API_BASE}/api/token-remaining?email=${encodeURIComponent(email)}`);
@@ -82,6 +124,21 @@ export default function HomePage() {
     setReply(data.reply);
     if (typeof data.remainingToken === 'number') {
       setRemainingToken(data.remainingToken);
+    }
+
+    // 手動刷新廣告
+    try {
+      if (typeof window !== 'undefined' && window.adsbygoogle) {
+        const ads = adRef.current?.getElementsByClassName('adsbygoogle');
+        if (ads && ads.length > 0) {
+          for (let i = 0; i < ads.length; i++) {
+            ads[i].innerHTML = '';
+          }
+        }
+        (window.adsbygoogle = window.adsbygoogle || []).push({});
+      }
+    } catch {
+      // 廣告刷新失敗，靜默處理
     }
   };
 
@@ -128,6 +185,9 @@ export default function HomePage() {
           {loading && !reply ? 'AI 回應產出中...' : reply}
         </p>
       </div>
+
+      {/* ✅ Lazy-load 廣告區塊 */}
+      <div className="max-w-2xl mx-auto mt-6" ref={adRef}></div>
     </main>
   );
 }
