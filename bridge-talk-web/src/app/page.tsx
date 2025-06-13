@@ -1,6 +1,7 @@
 'use client';
 
-import { useEffect, useRef,useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useRef, useState } from 'react';
 
 import { createClient } from '@/lib/supabase-browser';
 
@@ -25,6 +26,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const adRef = useRef<HTMLDivElement | null>(null);
   const supabase = createClient();
+  const router = useRouter();
 
   const recipientOptions = [
     { label: '我老公', value: '使用者的配偶（老公）' },
@@ -65,7 +67,7 @@ export default function HomePage() {
             try {
               (window.adsbygoogle = window.adsbygoogle || []).push({});
             } catch {
-              // 廣告載入失敗，靜默處理
+              // 忽略錯誤：廣告載入失敗時靜默處理
             }
             observer.unobserve(entry.target);
           }
@@ -138,12 +140,12 @@ export default function HomePage() {
         (window.adsbygoogle = window.adsbygoogle || []).push({});
       }
     } catch {
-      // 廣告刷新失敗，靜默處理
+      // 忽略錯誤：刷新廣告時靜默處理
     }
   };
 
   return (
-    <main className="min-h-screen p-4 bg-gray-50">
+    <main className="min-h-screen p-4 bg-gray-50 flex flex-col">
       <div className="max-w-2xl mx-auto mb-4">
         <AuthStatus />
       </div>
@@ -165,13 +167,20 @@ export default function HomePage() {
 
       <div className="max-w-2xl mx-auto mb-8">
         {userEmail ? (
-          <UserInputForm
-            onSubmit={handleSubmit}
-            mode={mode}
-            maxMessageLength={800}
-            disableRecipient={mode === 'reply'}
-            recipientOptions={recipientOptions}
-          />
+          <div className="space-y-4">
+            <UserInputForm
+              onSubmit={handleSubmit}
+              mode={mode}
+              maxMessageLength={800}
+              disableRecipient={mode === 'reply'}
+              recipientOptions={recipientOptions}
+            />
+            <div className="flex justify-center gap-4">
+              <Button onClick={() => router.push('/history')} variant="outline" size="sm">
+                查看歷史紀錄
+              </Button>
+            </div>
+          </div>
         ) : (
           <div className="text-center text-gray-600 p-4 border border-gray-300 rounded">
             請先登入才能輸入心聲 ✨
@@ -188,6 +197,18 @@ export default function HomePage() {
 
       {/* ✅ Lazy-load 廣告區塊 */}
       <div className="max-w-2xl mx-auto mt-6" ref={adRef}></div>
+
+      {/* ✅ AI 回應免責聲明 */}
+      <div className="max-w-2xl mx-auto mt-6 px-4">
+        <div className="bg-white border border-gray-200 rounded text-xs text-gray-500 p-4 text-center leading-relaxed">
+          ⚠️ 本 AI 回應由人工智慧自動生成，僅供參考，不構成任何法律、心理或醫療建議。請使用者自行判斷其適用性與傳送對象，BridgeTalk 對於因使用本回應所產生之任何後果不承擔責任。
+        </div>
+      </div>
+
+      {/* ✅ Footer 免責連結 */}
+      <p className="text-xs text-gray-500 text-center mt-8">
+        使用本網站即表示您同意 <a href="/disclaimer" className="underline text-blue-500">免責聲明</a>
+      </p>
     </main>
   );
 }
