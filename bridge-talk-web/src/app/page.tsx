@@ -1,6 +1,5 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState } from 'react';
 
 import { createClient } from '@/lib/supabase-browser';
@@ -11,7 +10,6 @@ import UserInputForm from '@/components/UserInputForm';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
 
-// ✅ 擴充 window.adsbygoogle 類型
 declare global {
   interface Window {
     adsbygoogle?: unknown[];
@@ -26,7 +24,6 @@ export default function HomePage() {
   const [loading, setLoading] = useState(false);
   const adRef = useRef<HTMLDivElement | null>(null);
   const supabase = createClient();
-  const router = useRouter();
 
   const recipientOptions = [
     { label: '我老公', value: '使用者的配偶（老公）' },
@@ -67,7 +64,7 @@ export default function HomePage() {
             try {
               (window.adsbygoogle = window.adsbygoogle || []).push({});
             } catch {
-              // 忽略錯誤：廣告載入失敗時靜默處理
+              /* 廣告載入失敗，靜默處理 */
             }
             observer.unobserve(entry.target);
           }
@@ -128,7 +125,6 @@ export default function HomePage() {
       setRemainingToken(data.remainingToken);
     }
 
-    // 手動刷新廣告
     try {
       if (typeof window !== 'undefined' && window.adsbygoogle) {
         const ads = adRef.current?.getElementsByClassName('adsbygoogle');
@@ -140,7 +136,7 @@ export default function HomePage() {
         (window.adsbygoogle = window.adsbygoogle || []).push({});
       }
     } catch {
-      // 忽略錯誤：刷新廣告時靜默處理
+      /* 廣告刷新失敗，靜默處理 */
     }
   };
 
@@ -167,20 +163,13 @@ export default function HomePage() {
 
       <div className="max-w-2xl mx-auto mb-8">
         {userEmail ? (
-          <div className="space-y-4">
-            <UserInputForm
-              onSubmit={handleSubmit}
-              mode={mode}
-              maxMessageLength={800}
-              disableRecipient={mode === 'reply'}
-              recipientOptions={recipientOptions}
-            />
-            <div className="flex justify-center gap-4">
-              <Button onClick={() => router.push('/history')} variant="outline" size="sm">
-                查看歷史紀錄
-              </Button>
-            </div>
-          </div>
+          <UserInputForm
+            onSubmit={handleSubmit}
+            mode={mode}
+            maxMessageLength={800}
+            disableRecipient={mode === 'reply'}
+            recipientOptions={recipientOptions}
+          />
         ) : (
           <div className="text-center text-gray-600 p-4 border border-gray-300 rounded">
             請先登入才能輸入心聲 ✨
@@ -188,11 +177,20 @@ export default function HomePage() {
         )}
       </div>
 
-      <div className="max-w-2xl mx-auto mt-10 p-6 bg-white border border-gray-300 rounded min-h-[120px]">
+      {/* ✅ AI 回應區塊與歷史按鈕 */}
+      <div className="max-w-2xl mx-auto mt-10 p-6 bg-white border border-gray-300 rounded min-h-[120px] w-full">
         <h4 className="text-md font-semibold mb-2">AI 回應</h4>
         <p className="whitespace-pre-wrap text-sm text-gray-800">
           {loading && !reply ? 'AI 回應產出中...' : reply}
         </p>
+        <div className="text-right mt-4">
+          <a
+            href="/history"
+            className="text-xs text-blue-500 underline hover:text-blue-700 transition"
+          >
+            查看歷史訊息 →
+          </a>
+        </div>
       </div>
 
       {/* ✅ Lazy-load 廣告區塊 */}
@@ -207,7 +205,8 @@ export default function HomePage() {
 
       {/* ✅ Footer 免責連結 */}
       <p className="text-xs text-gray-500 text-center mt-8">
-        使用本網站即表示您同意 <a href="/disclaimer" className="underline text-blue-500">免責聲明</a>
+        使用本網站即表示您同意{' '}
+        <a href="/disclaimer" className="underline text-blue-500">免責聲明</a>
       </p>
     </main>
   );
