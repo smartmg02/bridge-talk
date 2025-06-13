@@ -1,13 +1,11 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 
 import { createClient } from '@/lib/supabase-browser';
 
 import AuthStatus from '@/components/AuthStatus';
 import Button from '@/components/buttons/Button';
-import HistoryList from '@/components/HistoryList';
 import UserInputForm from '@/components/UserInputForm';
 
 const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || '';
@@ -18,7 +16,6 @@ export default function HomePage() {
   const [userEmail, setUserEmail] = useState('');
   const [remainingToken, setRemainingToken] = useState<number | null>(null);
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
   const supabase = createClient();
 
   const recipientOptions = [
@@ -47,8 +44,6 @@ export default function HomePage() {
     const data = await res.json();
     if (res.ok) {
       setRemainingToken(data.remaining);
-    } else {
-      console.warn('取得剩餘 token 失敗', data);
     }
   };
 
@@ -80,7 +75,6 @@ export default function HomePage() {
     setLoading(false);
 
     if (!res.ok) {
-      console.warn('[❌ 回應失敗]', data);
       setReply(`⚠️ 產生失敗：${data.error || '未知錯誤'}`);
       return;
     }
@@ -133,17 +127,6 @@ export default function HomePage() {
         <p className="whitespace-pre-wrap text-sm text-gray-800">
           {loading && !reply ? 'AI 回應產出中...' : reply}
         </p>
-      </div>
-
-      <div className="max-w-2xl mx-auto mt-8">
-        <h3 className="text-lg font-semibold mb-2">最近紀錄預覽</h3>
-        <HistoryList userEmail={userEmail} selectedId={undefined} limit={3} />
-      </div>
-
-      <div className="text-center mt-8">
-        <Button variant="primary" onClick={() => router.push('/history')}>
-          查看所有紀錄
-        </Button>
       </div>
     </main>
   );

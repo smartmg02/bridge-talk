@@ -1,6 +1,6 @@
-// ✅ 完整版 src/components/UserInputForm.tsx
 'use client';
 
+import Image from 'next/image'; // ✅ 使用 Next.js Image 元件
 import { useState } from 'react';
 
 import Button from '@/components/buttons/Button';
@@ -78,20 +78,31 @@ export default function UserInputForm({
         </p>
       </div>
 
+      {/* 🎯 圖像角色選擇區塊 */}
       <div>
-        <label className="block text-sm font-medium mb-1">角色</label>
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value)}
-          className="w-full border border-gray-300 rounded p-2"
-          disabled={disabled}
-        >
+        <label className="block text-sm font-medium mb-2">選擇角色</label>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
           {roleOptions.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => setRole(opt.value)}
+              disabled={disabled}
+              className={`rounded-xl border-2 p-2 flex flex-col items-center transition-all ${
+                role === opt.value ? 'border-blue-500 shadow-lg' : 'border-gray-300'
+              } ${disabled ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-400'}`}
+            >
+              <Image
+                src={`/images/characters/${opt.value}.webp`}
+                alt={opt.label}
+                width={96}
+                height={96}
+                className="object-cover rounded-md"
+              />
+              <span className="mt-2 text-sm">{opt.label}</span>
+            </button>
           ))}
-        </select>
+        </div>
       </div>
 
       <div>
